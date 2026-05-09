@@ -131,9 +131,14 @@ function getExistingGradeSection() {
     for (let name of possibleSheets) {
       const sheet = ss.getSheetByName(name);
       if (sheet) {
-        const val = sheet.getRange("F1").getValue().toString();
-        if (val && val.includes("GRADE & SECTION:")) {
-          return val.replace("GRADE & SECTION:", "").trim();
+        // Look directly at A1 instead of F1
+        const val = sheet.getRange("A1").getValue().toString().toUpperCase();
+        
+        // Target format: "GRADE 6 - TAUSUG'S 1Q CONSOLIDATED GRADES"
+        if (val && val.includes("'S")) {
+          let extracted = val.split("'S")[0]; // Isolates "GRADE 6 - TAUSUG"
+          extracted = extracted.replace("GRADE ", "").trim(); // Cleans it to "6 - TAUSUG"
+          return extracted;
         }
       }
     }
