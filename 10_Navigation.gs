@@ -139,9 +139,16 @@ function initializeSummaries() {
     const nameData = studentNames.map((n, i) => [i + 1, n[0]]);
     sheet.getRange(3, 1, nameData.length, 2).setValues(nameData);
     
-    const quarters = ["1Q", "2Q", "3Q", "4Q"];
+const quarters = ["1Q", "2Q", "3Q", "4Q"];
+    
+    // Smart Alias Matching: Find the exact raw header name you typed in CONSOL GRADE
+    const rawList = getSubjectList();
+    let rawHeaderName = rawList.find(s => normalizeSub(s) === subName) || subName;
+
     for (let r = 0; r < studentNames.length; r++) {
       const row = r + 3;
+      
+      // MAPEH dynamically averages its sub-components
       if (subName === "MAPEH") {
         quarters.forEach((q, qIdx) => {
           const colL = String.fromCharCode(67 + qIdx);
@@ -150,16 +157,20 @@ function initializeSummaries() {
           );
         });
       } else {
+        // Standard Subjects: Inject the matching raw header (e.g., "ARALPAN") into the formula
         quarters.forEach((q, qIdx) => {
-          const formula = `=IFERROR(INDEX('${q} CONSOL GRADE'!$C$3:$O, MATCH($B${row}, '${q} CONSOL GRADE'!$B$3:$B, 0), MATCH("${subName}", '${q} CONSOL GRADE'!$C$2:$O$2, 0)), "")`;
+          const formula = `=IFERROR(INDEX('${q} CONSOL GRADE'!$C$3:$O, MATCH($B${row}, '${q} CONSOL GRADE'!$B$3:$B, 0), MATCH("${rawHeaderName}", '${q} CONSOL GRADE'!$C$2:$O$2, 0)), "")`;
           sheet.getRange(row, 3 + qIdx).setFormula(formula);
         });
       }
+      // Average Column Formula
       sheet.getRange(row, 7).setFormula(`=IF(COUNT(C${row}:F${row})>0, ROUND(AVERAGE(C${row}:F${row}), 2), "")`);
     }
 
-    // Enforce Number Formatting and Borders
-    sheet.getRange(3, 3, lastRow - 2, 5).setNumberFormat("0.00"); // 2 Decimal places for all grades and average
+    // Split Number Formatting: Whole numbers for Quarters (C:F), 2 Decimals for Average (G)
+    sheet.getRange(3, 3, lastRow - 2, 4).setNumberFormat("0"); // Columns C, D, E, F
+    sheet.getRange(3, 7, lastRow - 2, 1).setNumberFormat("0.00"); // Column G
+    
     sheet.getRange(1, 1, lastRow, 7).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
     
     // Protection & Hide
