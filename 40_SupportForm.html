@@ -72,14 +72,13 @@
     </button>
   </div>
 
-<div class="footer-container" style="display: flex; justify-content: center; align-items: center; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border);">
-    <div class="footer-tag" id="dynamicFooter"></div>
+<div class="footer-container" style="display: flex; justify-content: center; align-items: center; margin-top: auto; padding-top: 20px; padding-bottom: 5px;">
+    <div class="footer-tag" id="dynamicFooter" style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;"></div>
   </div>
 </div>
 
 <script>
-  function submitTicket() {
-// Load copyright footer immediately when the app opens
+  // Load copyright footer immediately when the app opens
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
   });
@@ -95,7 +94,9 @@
       return;
     }
 
+    // Animate the button AND show the universal loading modal
     btn.disabled = true;
+    btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="spin-anim"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Sending...`;
     showUniversalLoading("Submitting Ticket", "Uploading files and sending your request to Teacher MJ...");
 
     // Check if a file is attached
@@ -104,7 +105,10 @@
       
       // Safety Check: Limit to 10MB to prevent Google Apps Script timeout/memory errors
       if (file.size > 10 * 1024 * 1024) {
-        showUniversalWarning("File Too Large", "Please keep video/image attachments under 10MB.", "Understood", () => { btn.disabled = false; });
+        showUniversalWarning("File Too Large", "Please keep video/image attachments under 10MB.", "Understood", () => { 
+          btn.disabled = false; 
+          btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> Send Support Ticket`;
+        });
         return;
       }
 
@@ -136,7 +140,9 @@
           showUniversalSuccess("Ticket Sent", "Your request has been delivered directly to Teacher MJ.", customAction);
         })
         .withFailureHandler(err => {
-          document.getElementById('submitBtn').disabled = false;
+          const btn = document.getElementById('submitBtn');
+          btn.disabled = false;
+          btn.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> Send Support Ticket`;
           showUniversalWarning("Submission Failed", err.message, "Understood", () => {});
         })
         .processSupportTicket(data);
