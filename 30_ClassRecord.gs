@@ -15,21 +15,9 @@ function showClassRecordUI() {
 }
 
 function processBatchForm(data) {
-  // 1. THE GATEKEEPER & ARCHIVE LOGIC
-  const sequenceCheck = checkSequence(data.quarter);
-  if (!sequenceCheck.allowed) {
-    throw new Error(sequenceCheck.msg);
-  }
-
-  const sequence = ["First Quarter", "Second Quarter", "Third Quarter", "Fourth Quarter"];
-  const prefixesList = ["1Q", "2Q", "3Q", "4Q"];
-  const currentIndex = sequence.indexOf(data.quarter);
+  // Note: Archiving is now handled dynamically by the frontend premium process
   
-  if (currentIndex > 0) {
-    archiveQuarter(prefixesList[currentIndex - 1]);
-  }
-
-  // 2. GENERATION LOGIC
+  // 1. GENERATION LOGIC
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sourceSheet = ss.getSheetByName("Learner's Name");
   const studentNames = sourceSheet.getRange("B4:B18").getValues();
@@ -116,7 +104,7 @@ function checkSequence(targetQuarter) {
   const prefixes = ["1Q", "2Q", "3Q", "4Q"];
   
   const targetIndex = sequence.indexOf(targetQuarter);
-  if (targetIndex === 0) return { allowed: true }; 
+  if (targetIndex === 0) return { allowed: true, needsConfirm: false }; 
   
   const prevPrefix = prefixes[targetIndex - 1];
   const prevName = sequence[targetIndex - 1];
@@ -125,7 +113,25 @@ function checkSequence(targetQuarter) {
   if (!prevConsol) {
     return { allowed: false, msg: "Access Denied: You must generate " + prevName + " records before starting " + targetQuarter + "." };
   }
-  return { allowed: true };
+  return { 
+    allowed: true, 
+    needsConfirm: true, 
+    prevName: prevName, 
+    prevPrefix: prevPrefix,
+    msg: `Generating ${targetQuarter} will automatically HIDE and LOCK all ${prevName} sheets for security. Proceed?` 
+  };
+}
+
+function getExistingGradeSection() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("FINAL CONSOLIDATED");
+  if (!sheet) return "";
+  const val = sheet.getRange("F1").getValue().toString();
+  return val.replace("GRADE & SECTION:", "").trim();
+}
+
+function performArchiveStep(prevPrefix) {
+  archiveQuarter(prevPrefix);
+  return "Archived";
 }
 
 function archiveQuarter(prefix) {
@@ -133,6 +139,11 @@ function archiveQuarter(prefix) {
   ss.getSheets().forEach(s => {
     if (s.getName().startsWith(prefix)) {
       try { s.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch (e) { s.hideSheet(); }
+      
+      // FIX: Remove existing protections (like 'Warning Only') before locking
+      const oldProtections = s.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+      oldProtections.forEach(p => p.remove());
+
       const protection = s.protect().setDescription('Archived Quarter Protection');
       protection.removeEditors(protection.getEditors());
       if (protection.canDomainEdit()) protection.setDomainEdit(false);

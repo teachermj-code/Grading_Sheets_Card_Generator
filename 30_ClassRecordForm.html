@@ -79,14 +79,26 @@
     <button class="btn btn-main" id="submitBtn" onclick="submitBatch()" disabled>Generate Grading Sheets</button>
   </div>
 
-  <div class="footer-container">
+<div class="footer-container" style="position: relative; padding-bottom: 15px;">
     <div class="footer-tag" id="dynamicFooter"></div>
+    <a href="support.html" target="_blank" class="btn-admin" style="position: absolute; right: 0; bottom: 10px; text-decoration: none; display: flex; align-items: center; gap: 5px; border-color: var(--teal); color: var(--teal);">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      PREMIUM SUPPORT
+    </a>
   </div>
 </div>
 
 <script>
-  // Set copyright from global standard
-  document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' MSD - COMPILED BY TEACHER MJ';
+// Set copyright from global standard
+  document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
+
+  // Auto-Fetch Existing Grade & Section
+  google.script.run.withSuccessHandler(function(gs) {
+    if (gs) {
+      document.getElementById('gradeSection').value = gs;
+      validateForm(); // Instantly validate so button unlocks
+    }
+  }).getExistingGradeSection();
 
   // Load dynamic subjects via utility function
   google.script.run.withSuccessHandler(function(subjects) {
@@ -141,36 +153,63 @@
     );
   }
 
-  function submitBatch() {
+function submitBatch() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; 
-    btn.innerText = 'Processing...';
+    btn.innerText = 'Checking Sequence...';
 
+    const quarter = document.getElementById('quarter').value;
+
+    // STEP 1: Sequence Check
+    google.script.run
+      .withSuccessHandler(res => {
+        if (!res.allowed) {
+          btn.disabled = false; btn.innerText = 'Generate Grading Sheets';
+          showUniversalWarning("Generation Blocked", res.msg, "Understood", () => {});
+        } else if (res.needsConfirm) {
+          btn.disabled = false; btn.innerText = 'Generate Grading Sheets';
+          showUniversalWarning("Lock Previous Quarter", res.msg, "Lock & Proceed", function() {
+            executePremiumGeneration(quarter, res.prevPrefix, res.prevName);
+          });
+        } else {
+          executePremiumGeneration(quarter, null, null);
+        }
+      })
+      .checkSequence(quarter);
+  }
+
+  function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+
+    // Package the data
     const selections = [];
     document.querySelectorAll('.include-cb').forEach(cb => {
-      if (cb.checked) {
-        selections.push({ 
-          subject: cb.getAttribute('data-sub'), 
-          hasExam: cb.closest('.subject-card').querySelector('.exam-cb').checked 
-        });
-      }
+      if (cb.checked) selections.push({ subject: cb.getAttribute('data-sub'), hasExam: cb.closest('.subject-card').querySelector('.exam-cb').checked });
     });
+    const data = { gradeSection: document.getElementById('gradeSection').value, quarter: targetQuarter, selections: selections };
 
-    const data = { 
-      gradeSection: document.getElementById('gradeSection').value, 
-      quarter: document.getElementById('quarter').value, 
-      selections: selections 
-    };
-    
+    // STEP 2: Archive (If required)
+    if (prevPrefix) {
+      btn.innerText = `Hiding & Locking ${prevName} sheets...`;
+      google.script.run
+        .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
+        .performArchiveStep(prevPrefix);
+    } else {
+      triggerSheetCreation(btn, data, targetQuarter);
+    }
+  }
+
+  function triggerSheetCreation(btn, data, targetQuarter) {
+    // STEP 3: Generate Current Quarter
+    btn.innerText = `Creating ${targetQuarter} Grading Sheets...`;
     google.script.run
       .withSuccessHandler(() => {
-        // We inject a custom button to close the app after generation
         const customAction = `<button class="btn-modal-primary" onclick="google.script.host.close()">Close App</button>`;
         showUniversalSuccess("Records Generated", "Class records and formulas configured for students.", customAction);
       })
       .withFailureHandler(err => {
-        btn.disabled = false; 
-        btn.innerText = 'Generate Grading Sheets';
+        btn.disabled = false; btn.innerText = 'Generate Grading Sheets';
         showUniversalWarning("Generation Blocked", err.message, "Understood", () => {});
       })
       .processBatchForm(data);
