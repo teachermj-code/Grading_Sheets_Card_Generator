@@ -126,7 +126,7 @@ function executeGeneration(quarter, overwrite) {
     btn.disabled = true;
     
     // Show Premium Loader instead of button text
-    showUniversalLoading("Generating Awards", "Extracting honors data and building your PDF certificate...");
+    showUniversalLoading("Generating Awards", "Extracting honors data and building your PDF ...");
     
     google.script.run
       .withSuccessHandler(function(url) {
