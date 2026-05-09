@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- INJECT MASTER STYLES AND MODAL SYSTEM -->
+  <?!= include('01_UniversalModal'); ?>
+  
+  <style>
+    /* ONLY APP-SPECIFIC STYLES HERE */
+    .app-shell { display: flex; flex-direction: column; height: 100%; }
+    .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--teal-dark); padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(4, 51, 69, 0.15); }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: #ffffff; letter-spacing: 0.5px; }
+    .brand svg { color: var(--teal); }
+
+    .instruction { font-size: 12px; color: var(--text-muted); line-height: 1.5; font-weight: 500; margin-bottom: 15px; background: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid var(--border); }
+    .btn-container { display: flex; flex-direction: column; gap: 12px; }
+    
+    .btn-nav { display: flex; align-items: center; justify-content: flex-start; gap: 15px; width: 100%; padding: 12px 20px; border-radius: 12px; border: none; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.2s; text-align: left; }
+    .btn-nav:hover { transform: translateX(5px); }
+    .btn-nav span { font-size: 10px; font-weight: 500; opacity: 0.9; display: block; }
+
+    .btn-init { background: #ffffff; border: 2px dashed var(--teal-dark); color: var(--teal-dark); margin-bottom: 8px; }
+    .btn-init svg { color: var(--teal-dark); }
+    .btn-active { background: var(--teal); color: white; box-shadow: 0 4px 6px rgba(0, 182, 199, 0.2); }
+    .btn-summary { background: var(--green); color: white; box-shadow: 0 4px 6px rgba(0, 153, 102, 0.2); }
+    .btn-gwa { background: var(--orange); color: white; box-shadow: 0 4px 6px rgba(255, 140, 66, 0.2); }
+
+    .footer-container { display: flex; justify-content: center; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
+    .footer-tag { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 0.5px; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="nav-bar">
+    <div class="brand">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+      <span>NAVIGATOR</span>
+    </div>
+  </div>
+
+  <div class="instruction">If this is a new workbook, <b>Initialize</b> to create your year-long summaries. Otherwise, choose a view mode.</div>
+
+  <div class="btn-container">
+    <button class="btn-nav btn-init" onclick="runInitialization(this)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+      <div>INITIALIZE SYSTEM<span>Create Ghost Summaries & GWA sheets</span></div>
+    </button>
+
+    <button class="btn-nav btn-active" onclick="switchMode('ACTIVE', this)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <div>VIEW ACTIVE QUARTER<span>Shows current working records</span></div>
+    </button>
+
+    <button class="btn-nav btn-summary" onclick="switchMode('SUMMARY', this)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      <div>SUBJECT PROGRESS<span>Shows subject trends (1Q-4Q)</span></div>
+    </button>
+
+    <button class="btn-nav btn-gwa" onclick="switchMode('GWA', this)">
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+      <div>FINAL GWA DASHBOARD<span>Summary for year-end GWA</span></div>
+    </button>
+  </div>
+
+  <div class="footer-container">
+    <!-- Using script below to dynamically set year from the core logic we defined -->
+    <div class="footer-tag" id="dynamicFooter"></div>
+  </div>
+</div>
+
+<script>
+  // Set copyright from global standard
+  document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' MSD - COMPILED BY TEACHER MJ';
+
+  function runInitialization(btn) {
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "Building Infrastructure...";
+
+    google.script.run
+      .withSuccessHandler(function() {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        // Using the Universal Modal from 01_UniversalModal.html
+        showUniversalSuccess("Initialization Complete", "All Summary & GWA sheets have been created.");
+      })
+      .withFailureHandler(function(err) {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        showUniversalWarning("Initialization Failed", err.message, "Acknowledge", () => {});
+      })
+      .initializeSummaries(); 
+  }
+
+  function switchMode(mode, btn) {
+    const originalContent = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = "Processing View...";
+
+    google.script.run
+      .withSuccessHandler(function() {
+        btn.innerHTML = originalContent;
+        btn.disabled = false;
+        showUniversalSuccess("View Updated", "The selected sheets are now visible.");
+      })
+      .toggleViewMode(mode);
+  }
+</script>
+
+</body>
+</html>

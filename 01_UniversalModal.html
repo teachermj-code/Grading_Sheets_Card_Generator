@@ -1,0 +1,119 @@
+<!-- 
+  ==========================================
+  01_UniversalModal.html
+  PURPOSE: Master CSS, Brand Styling, and Reusable Glassmorphism Modals
+  ==========================================
+-->
+<style>
+  /* 1. MASTER COLOR PALETTE */
+  :root {
+    --bg: #f0fafb; 
+    --teal: #00b6c7; 
+    --teal-mid: #0d9aac; 
+    --teal-dark: #043345;
+    --green: #009966; 
+    --orange: #FF8C42; 
+    --text-main: #1a3540;
+    --card-bg: #ffffff; 
+    --border: #c4dce0; 
+    --text-muted: #5e7c88;
+  }
+
+  /* 2. MASTER TYPOGRAPHY */
+  body { 
+    font-family: 'Tahoma', sans-serif; 
+    background-color: var(--bg); 
+    color: var(--text-main); 
+    margin: 0; 
+    padding: 20px; 
+    overflow: hidden; 
+  }
+
+  /* 3. GLASSMORPHISM MODAL ENGINE */
+  .custom-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(4, 51, 69, 0.4); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center; z-index: 9999;
+    opacity: 0; transition: opacity 0.4s ease;
+  }
+  .custom-modal-overlay.active { display: flex; opacity: 1; pointer-events: auto; }
+  
+  .custom-modal-card {
+    background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2); width: 300px; border-radius: 24px; padding: 32px; text-align: center;
+    transform: scale(0.9) translateY(20px); transition: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .custom-modal-overlay.active .custom-modal-card { transform: scale(1) translateY(0); }
+  
+  .modal-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+  .modal-icon.warning { background: #fff4ed; color: var(--orange); }
+  .modal-icon.success { background: #e8f5f0; color: var(--green); }
+  
+  .modal-title { font-size: 18px; font-weight: 800; color: var(--teal-dark); margin: 0 0 10px; }
+  .modal-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; margin: 0 0 28px; }
+  
+  .modal-actions { display: flex; gap: 10px; justify-content: center; }
+  .btn-modal-primary { background: var(--teal); color: white; border: none; border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; flex: 1; transition: 0.2s;}
+  .btn-modal-primary:hover { background: var(--teal-mid); }
+  .btn-modal-secondary { background: rgba(255, 255, 255, 0.5); border: 1px solid var(--border); color: var(--text-muted); border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; flex: 1; transition: 0.2s; }
+  .btn-modal-secondary:hover { background: #f8fafc; color: var(--text-main); }
+</style>
+
+<!-- 4. HTML STRUCTURE (Hidden until triggered) -->
+<div class="custom-modal-overlay" id="universalModal">
+  <div class="custom-modal-card">
+    <div class="modal-icon" id="uniModalIcon"></div>
+    <h3 class="modal-title" id="uniModalTitle"></h3>
+    <p class="modal-desc" id="uniModalDesc"></p>
+    <div class="modal-actions" id="uniModalActions"></div>
+  </div>
+</div>
+
+<!-- 5. UNIVERSAL JAVASCRIPT FUNCTIONS -->
+<script>
+  const uniModal = document.getElementById('universalModal');
+  const uniIco = document.getElementById('uniModalIcon');
+  const uniTtl = document.getElementById('uniModalTitle');
+  const uniDsc = document.getElementById('uniModalDesc');
+  const uniAct = document.getElementById('uniModalActions');
+
+  const iconWarning = `<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+  const iconSuccess = `<svg width="32" height="32" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+  function closeUniversalModal() { 
+    uniModal.classList.remove('active'); 
+  }
+
+  // Use this for simple success messages (e.g., "Sheets Generated")
+  function showUniversalSuccess(title, desc, customActionHtml = null) {
+    uniIco.className = 'modal-icon success';
+    uniIco.innerHTML = iconSuccess;
+    uniTtl.innerText = title;
+    uniDsc.innerHTML = desc;
+    
+    // Allows us to inject custom buttons like "Open PDF" if needed
+    if (customActionHtml) {
+      uniAct.innerHTML = customActionHtml;
+    } else {
+      uniAct.innerHTML = `<button class="btn-modal-primary" onclick="closeUniversalModal()">OK</button>`;
+    }
+    uniModal.classList.add('active');
+  }
+
+  // Use this for Warnings or Data Destruction (e.g., "Overwrite File?")
+  function showUniversalWarning(title, desc, confirmBtnText, onConfirmCallback) {
+    uniIco.className = 'modal-icon warning';
+    uniIco.innerHTML = iconWarning;
+    uniTtl.innerText = title;
+    uniDsc.innerHTML = desc;
+    
+    // Expose callback globally so the inline button can trigger it
+    window._tempConfirmCallback = onConfirmCallback;
+    
+    uniAct.innerHTML = `
+      <button class="btn-modal-secondary" onclick="closeUniversalModal()">Cancel</button>
+      <button class="btn-modal-primary" style="background:var(--orange)" onclick="window._tempConfirmCallback(); closeUniversalModal();">${confirmBtnText}</button>
+    `;
+    uniModal.classList.add('active');
+  }
+</script>
