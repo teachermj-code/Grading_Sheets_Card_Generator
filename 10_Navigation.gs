@@ -86,11 +86,23 @@ function initializeSummaries() {
 
   const studentNames = learnerSheet.getRange("B4:B" + learnerSheet.getLastRow()).getValues().filter(n => n[0] !== "");
   
-  // CRITICAL: Sort subjects so MAPEH is ALWAYS last
-  const rawSubjects = getSubjectList().map(s => [s]); // Reusing utility function
-  const sortedSubjects = rawSubjects.sort((a, b) => {
-    if (a[0].toUpperCase() === "MAPEH") return 1;
-    if (b[0].toUpperCase() === "MAPEH") return -1;
+// Standardize Subject Names (Aliases -> Unified Name)
+  const normalizeSub = (name) => {
+    if (!name) return "";
+    const raw = name.toString().toUpperCase().replace(/\s/g, "").replace(/\./g, ""); 
+    if (["AP", "ARPAN", "ARALPAN", "ARALINGPANLIPUNAN"].includes(raw)) return "ARALING PANLIPUNAN";
+    if (["PE", "PHYSICALEDUCATION"].includes(raw)) return "PE";
+    if (["MATH", "MATHEMATICS"].includes(raw)) return "MATH";
+    return name.toString().toUpperCase().trim();
+  };
+
+  // Normalize subjects and forcefully append MAPEH if missing from raw data
+  let uniqueSubjects = [...new Set(getSubjectList().map(s => normalizeSub(s)))];
+  if (!uniqueSubjects.includes("MAPEH")) uniqueSubjects.push("MAPEH");
+
+  const sortedSubjects = uniqueSubjects.map(s => [s]).sort((a, b) => {
+    if (a[0] === "MAPEH") return 1;
+    if (b[0] === "MAPEH") return -1;
     return 0;
   });
 
@@ -146,6 +158,8 @@ function initializeSummaries() {
       sheet.getRange(row, 7).setFormula(`=IF(COUNT(C${row}:F${row})>0, ROUND(AVERAGE(C${row}:F${row}), 2), "")`);
     }
 
+    // Enforce Number Formatting and Borders
+    sheet.getRange(3, 3, lastRow - 2, 5).setNumberFormat("0.00"); // 2 Decimal places for all grades and average
     sheet.getRange(1, 1, lastRow, 7).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
     
     // Protection & Hide
@@ -166,9 +180,13 @@ function initializeSummaries() {
   finalSheet.setColumnWidth(11, 75);
   finalSheet.setColumnWidth(12, 195);
 
-  finalSheet.getRange("A1:L1").merge().setFontWeight("bold").setFontSize(14).setHorizontalAlignment("center").setVerticalAlignment("middle");
-    
-  const gwaHeaders = [["#", "NAME OF STUDENT", "FILIPINO", "ENGLISH", "MATH", "SCIENCE", "ARAL PAN", "GMRC", "HELE", "MAPEH", "GWA", "STATUS"]];
+finalSheet.getRange("A1:L1").merge().setFontWeight("bold").setFontSize(14).setHorizontalAlignment("center").setVerticalAlignment("middle");
+  finalSheet.getRange("A1").setValue("FINAL CONSOLIDATED GRADES");
+
+  // Dynamically map to the unified Standard Subject Names
+  const subMap = ["FILIPINO", "ENGLISH", "MATH", "SCIENCE", "ARALING PANLIPUNAN", "GMRC", "HELE", "MAPEH"];
+  const gwaHeaders = [["#", "NAME OF STUDENT", ...subMap, "GWA", "STATUS"]];
+  
   finalSheet.getRange("A2:L2").setValues(gwaHeaders)
     .setBackground("#FF00FF").setFontColor("#FFFFFF").setFontWeight("bold")
     .setHorizontalAlignment("center").setVerticalAlignment("middle").setFontSize(12).setFontFamily(SYSTEM_CONFIG.fontPrimary);
@@ -176,13 +194,20 @@ function initializeSummaries() {
   const finalNames = studentNames.map((n, i) => [i + 1, n[0]]);
   finalSheet.getRange(3, 1, finalNames.length, 2).setValues(finalNames);
 
-  const subMap = ["FILIPINO", "ENGLISH", "MATH", "SCIENCE", "ARAL PAN", "GMRC", "HELE", "MAPEH"];
   subMap.forEach((s, i) => {
     finalSheet.getRange(3, 3 + i, finalNames.length, 1).setFormula(`=IFERROR(VLOOKUP($B3, 'SUMMARY_${s}'!$B$3:$G, 6, FALSE), "")`);
   });
 
   finalSheet.getRange(3, 11, finalNames.length, 1).setFormula(`=IF(COUNT(C3:J3)>0, ROUND(AVERAGE(C3:J3), 2), "")`);
   finalSheet.getRange(3, 12, finalNames.length, 1).setFormula(`=IFS(K3="","",K3>=98,"With Highest Honors",K3>=95,"With High Honors",K3>=90,"With Honors",K3<90,"")`);
+
+  // Strictly enforce formatting rules
+  const dataRangeCount = finalNames.length;
+  finalSheet.getRange(3, 1, dataRangeCount, 12).setVerticalAlignment("middle");
+  finalSheet.getRange(3, 1, dataRangeCount, 1).setHorizontalAlignment("center"); // Number ID
+  finalSheet.getRange(3, 2, dataRangeCount, 1).setHorizontalAlignment("left"); // Student Name
+  finalSheet.getRange(3, 3, dataRangeCount, 10).setHorizontalAlignment("center"); // All Grades & Status
+  finalSheet.getRange(3, 3, dataRangeCount, 9).setNumberFormat("0.00"); // 2 Decimal Places for Subject Grades & GWA
 
   finalSheet.getRange(1, 1, studentNames.length + 2, 12).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
   try { finalSheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch (e) { finalSheet.hideSheet(); }
@@ -199,7 +224,7 @@ function updateConsolidatedHeader(gradeSection) {
   const gsName = gradeSection.toUpperCase();
   const fullGS = gsName.startsWith("GRADE ") ? gsName : "GRADE " + gsName;
   finalSheet.getRange("A1").setValue(fullGS + "'S FINAL CONSOLIDATED GRADES");
-  finalSheet.getRange("F1").setValue("GRADE & SECTION: " + gsName);
+  finalSheet.getRange("A1").setValue("GRADE & SECTION: " + gsName);
 }
 
 /**
