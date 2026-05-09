@@ -93,15 +93,20 @@
   document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
 
 // Auto-Fetch Existing Grade & Section and Lock it
-  google.script.run.withSuccessHandler(function(gs) {
-    if (gs) {
-      const gsInput = document.getElementById('gradeSection');
-      gsInput.value = gs;
-      gsInput.disabled = true; // Lock the input
-      gsInput.parentElement.style.background = "#f8fafc"; // Visual indicator it is locked
-      validateForm(); // Instantly validate so button unlocks
-    }
-  }).getExistingGradeSection();
+  google.script.run
+    .withSuccessHandler(function(gs) {
+      if (gs && gs !== "") {
+        const gsInput = document.getElementById('gradeSection');
+        gsInput.value = gs;
+        gsInput.readOnly = true; // readOnly ensures the value is kept safe but still accessible
+        gsInput.parentElement.style.background = "#f8fafc"; 
+        validateForm(); 
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.warn("Auto-fetch skipped: " + err.message);
+    })
+    .getExistingGradeSection();
 
   // Load dynamic subjects via utility function
   google.script.run.withSuccessHandler(function(subjects) {
