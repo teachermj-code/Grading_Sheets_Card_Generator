@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- INJECT MASTER STYLES AND MODAL SYSTEM -->
+  <?!= include('01_UniversalModal'); ?>
+
+  <style>
+    .app-shell { display: flex; flex-direction: column; height: 100%; }
+    
+    .nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--teal-dark); padding: 12px 16px; border-radius: 12px; box-shadow: 0 4px 6px rgba(4, 51, 69, 0.15); }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: #ffffff; letter-spacing: 0.5px; }
+    .brand svg { color: var(--teal); }
+
+    .instruction { font-size: 12px; color: var(--text-muted); line-height: 1.5; font-weight: 500; margin-bottom: 20px; background: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid var(--border); }
+
+    .input-box { background: var(--card-bg); border: 1px solid var(--border); padding: 12px 14px; border-radius: 10px; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; transition: 0.2s; }
+    .input-box:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0, 182, 199, 0.15); }
+    .input-box label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    textarea { border: none; font-family: inherit; color: var(--text-main); font-size: 13px; outline: none; background: transparent; width: 100%; resize: none; min-height: 100px; }
+    
+    /* Custom File Upload Styling */
+    input[type="file"] { font-size: 11px; color: var(--text-muted); }
+    input[type="file"]::file-selector-button { background: var(--bg); border: 1px solid var(--border); color: var(--teal-dark); padding: 6px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-right: 10px; }
+    input[type="file"]::file-selector-button:hover { background: var(--border); }
+
+    .action-bar { display: flex; gap: 10px; margin-top: auto; padding-top: 10px; }
+    .btn-main { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: var(--teal); color: white; padding: 14px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0, 182, 199, 0.2); }
+    .btn-main:hover { background: var(--teal-mid); transform: translateY(-1px); }
+    .btn-main:disabled { background: #b0ced4; cursor: not-allowed; transform: none; box-shadow: none; }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="nav-bar">
+    <div class="brand">
+      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      <span>PREMIUM SUPPORT</span>
+    </div>
+  </div>
+
+  <div class="instruction">Describe your issue below. You may attach a screenshot or short screen recording. Files are uploaded securely to Teacher MJ's drive.</div>
+
+  <div class="input-box">
+    <label>Issue Description</label>
+    <textarea id="issueDesc" placeholder="E.g., The system blocked me from generating 2Q, what should I do?"></textarea>
+  </div>
+
+  <div class="input-box">
+    <label>Attach File (Optional, Max 10MB)</label>
+    <input type="file" id="fileUpload" accept="image/*,video/*">
+  </div>
+
+  <div class="action-bar">
+    <button class="btn-main" id="submitBtn" onclick="submitTicket()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+      Send Support Ticket
+    </button>
+  </div>
+</div>
+
+<script>
+  function submitTicket() {
+    const btn = document.getElementById('submitBtn');
+    const desc = document.getElementById('issueDesc').value;
+    const fileInput = document.getElementById('fileUpload');
+    
+    // Validation
+    if (!desc.trim()) {
+      showUniversalWarning("Missing Information", "Please describe your issue before submitting.", "Understood", () => {});
+      return;
+    }
+
+    btn.disabled = true;
+    showUniversalLoading("Submitting Ticket", "Uploading files and sending your request to Teacher MJ...");
+
+    // Check if a file is attached
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      
+      // Safety Check: Limit to 10MB to prevent Google Apps Script timeout/memory errors
+      if (file.size > 10 * 1024 * 1024) {
+        showUniversalWarning("File Too Large", "Please keep video/image attachments under 10MB.", "Understood", () => { btn.disabled = false; });
+        return;
+      }
+
+      // Convert file to Base64 data stream
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = {
+          description: desc,
+          fileName: file.name,
+          fileData: e.target.result
+        };
+        sendToBackend(data);
+      };
+      reader.readAsDataURL(file);
+      
+    } else {
+      // Send without file
+      const data = { description: desc, fileName: null, fileData: null };
+      sendToBackend(data);
+    }
+  }
+
+  function sendToBackend(data) {
+    // 150ms delay ensures Loading UI paints before backend locks the thread
+    setTimeout(() => {
+      google.script.run
+        .withSuccessHandler(msg => {
+          const customAction = `<button class="btn-modal-primary" onclick="google.script.host.close()">Close Support Desk</button>`;
+          showUniversalSuccess("Ticket Sent", "Your request has been delivered directly to Teacher MJ.", customAction);
+        })
+        .withFailureHandler(err => {
+          document.getElementById('submitBtn').disabled = false;
+          showUniversalWarning("Submission Failed", err.message, "Understood", () => {});
+        })
+        .processSupportTicket(data);
+    }, 150);
+  }
+</script>
+
+</body>
+</html>
