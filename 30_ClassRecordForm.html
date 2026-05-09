@@ -136,10 +136,13 @@ function triggerMasterReset() {
       "Reset All", 
       function() {
         showUniversalLoading("Master Reset in Progress", "Erasing all student records. Please wait...");
-        google.script.run
-          .withSuccessHandler(msg => showUniversalSuccess("Reset Complete", msg))
-          .withFailureHandler(err => showUniversalWarning("Reset Failed", err.message, "Understood", () => {}))
-          .resetSpreadsheet();
+        // Force browser to paint the loading UI before calling the server
+        setTimeout(() => {
+          google.script.run
+            .withSuccessHandler(msg => showUniversalSuccess("Reset Complete", msg))
+            .withFailureHandler(err => showUniversalWarning("Reset Failed", err.message, "Understood", () => {}))
+            .resetSpreadsheet();
+        }, 150);
       }
     );
   }
@@ -152,10 +155,13 @@ function triggerMasterReset() {
       "Clear Data", 
       function() {
         showUniversalLoading("Clearing Quarter", `Deleting sheets for ${q}. Please wait...`);
-        google.script.run
-          .withSuccessHandler(msg => showUniversalSuccess("Quarter Cleared", msg))
-          .withFailureHandler(err => showUniversalWarning("Clear Failed", err.message, "Understood", () => {}))
-          .deleteQuarterSheets(q);
+        // Force browser to paint the loading UI before calling the server
+        setTimeout(() => {
+          google.script.run
+            .withSuccessHandler(msg => showUniversalSuccess("Quarter Cleared", msg))
+            .withFailureHandler(err => showUniversalWarning("Clear Failed", err.message, "Understood", () => {}))
+            .deleteQuarterSheets(q);
+        }, 150);
       }
     );
   }
@@ -188,24 +194,27 @@ function submitBatch() {
       .checkSequence(quarter);
   }
 
-  function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
+function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
 
-    // Package the data
     const selections = [];
     document.querySelectorAll('.include-cb').forEach(cb => {
       if (cb.checked) selections.push({ subject: cb.getAttribute('data-sub'), hasExam: cb.closest('.subject-card').querySelector('.exam-cb').checked });
     });
     const data = { gradeSection: document.getElementById('gradeSection').value, quarter: targetQuarter, selections: selections };
 
-    // STEP 2: Archive (If required)
     if (prevPrefix) {
       btn.innerText = `Hiding & Locking ${prevName} sheets...`;
-      showUniversalLoading("Securing Records", `Hiding & Locking ${prevName} sheets...`);
-      google.script.run
-        .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
-        .performArchiveStep(prevPrefix);
+      showUniversalLoading("Securing Records", `Hiding & Locking ${prevName} sheets for security...`);
+      
+      // Delay server call by 150ms so the loading SVG animation can render on screen
+      setTimeout(() => {
+        google.script.run
+          .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
+          .performArchiveStep(prevPrefix);
+      }, 150);
+      
     } else {
       triggerSheetCreation(btn, data, targetQuarter);
     }
