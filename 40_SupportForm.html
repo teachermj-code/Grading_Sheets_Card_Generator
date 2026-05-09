@@ -22,6 +22,12 @@
     
     /* Custom File Upload Styling */
     input[type="file"] { font-size: 11px; color: var(--text-muted); }
+    /* Profile Card Styling */
+    .profile-card { display: flex; align-items: center; gap: 15px; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 2px 4px rgba(4, 51, 69, 0.05); }
+    .profile-img { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--teal); }
+    .profile-info { display: flex; flex-direction: column; }
+    .profile-name { font-size: 14px; font-weight: 800; color: var(--teal-dark); margin: 0; }
+    .profile-role { font-size: 11px; font-weight: 600; color: var(--text-muted); margin: 0; }
     input[type="file"]::file-selector-button { background: var(--bg); border: 1px solid var(--border); color: var(--teal-dark); padding: 6px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.2s; margin-right: 10px; }
     input[type="file"]::file-selector-button:hover { background: var(--border); }
 
@@ -34,10 +40,19 @@
 <body>
 
 <div class="app-shell">
-  <div class="nav-bar">
+<div class="nav-bar">
     <div class="brand">
       <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-      <span>PREMIUM SUPPORT</span>
+      <span>CONTACT SUPPORT</span>
+    </div>
+  </div>
+
+  <div class="profile-card">
+    <!-- Using a dynamic teal placeholder, but you can swap the src URL for your actual photo! -->
+    <img src="https://ui-avatars.com/api/?name=Teacher+MJ&background=00b6c7&color=fff&bold=true" alt="Teacher MJ" class="profile-img">
+    <div class="profile-info">
+      <p class="profile-name">Teacher MJ</p>
+      <p class="profile-role">System Administrator & Developer</p>
     </div>
   </div>
 
@@ -59,10 +74,19 @@
       Send Support Ticket
     </button>
   </div>
+
+  <div class="footer-container" style="position: relative; display: flex; justify-content: center; align-items: center; margin-top: auto; padding-top: 15px; border-top: 1px solid var(--border);">
+    <div class="footer-tag" id="dynamicFooter"></div>
+    <a href="https://chat.google.com/user/teachermjcbb@gmail.com" target="_blank" class="btn-admin" style="position: absolute; right: 0; bottom: 10px; text-decoration: none; display: flex; align-items: center; gap: 5px; border-color: var(--teal); color: var(--teal); background: transparent; padding: 8px 14px; font-size: 11px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      CHAT WITH ME
+    </a>
+  </div>
 </div>
 
 <script>
   function submitTicket() {
+    document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
     const btn = document.getElementById('submitBtn');
     const desc = document.getElementById('issueDesc').value;
     const fileInput = document.getElementById('fileUpload');

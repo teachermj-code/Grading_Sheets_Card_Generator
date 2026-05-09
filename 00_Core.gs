@@ -13,7 +13,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Navigation Control Center', 'showNavigationUI')
       .addSeparator()
-      .addItem('Contact Premium Support', 'showSupportUI')
+      .addItem('Contact Support', 'showSupportUI')
       .addToUi();
 }
 
