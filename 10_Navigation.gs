@@ -11,44 +11,69 @@
  */
 function showNavigationUI() {
   const template = HtmlService.createTemplateFromFile('10_NavigationForm');
-  const html = template.evaluate()
-      .setWidth(500)
-      .setHeight(550)
+const html = template.evaluate()
+      .setWidth(400) // Premium compact width
+      .setHeight(650) // Standard height
       .setTitle(' ');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
 
 /**
- * VIEW SWITCHER: Manages visibility for students' records.
+ * Checks if the system has already been initialized
  */
+function checkInitStatus() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const exists = ss.getSheetByName("FINAL CONSOLIDATED") !== null;
+  return { exists: exists };
+}
+
 function toggleViewMode(mode) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheets = ss.getSheets();
   
+  // 1. Pre-check if target quarter exists
+  let targetSheet = null;
+  if (["1Q", "2Q", "3Q", "4Q"].includes(mode)) {
+    targetSheet = ss.getSheetByName(mode + " CONSOL GRADE");
+    if (!targetSheet) throw new Error(`The records for ${mode} have not been generated yet. Please generate them in the Class Record Manager first.`);
+  } else if (mode === "SUMMARY") {
+    targetSheet = ss.getSheetByName("SUMMARY_FILIPINO"); 
+  } else if (mode === "GWA") {
+    targetSheet = ss.getSheetByName("FINAL CONSOLIDATED");
+  }
+
+  // 2. SHOW targets first (to prevent hiding the active sheet error)
   sheets.forEach(sheet => {
     const name = sheet.getName();
-    if (mode === "ACTIVE") {
-      if (!name.includes("TEMPLATE") && !name.startsWith("SUMMARY") && name !== "FINAL CONSOLIDATED" && name !== "Learner's Name") {
-        sheet.showSheet();
-      } else {
-        try { sheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { sheet.hideSheet(); }
-      }
-    } 
-    else if (mode === "SUMMARY") {
-      if (name.startsWith("SUMMARY_")) {
-        sheet.showSheet();
-      } else {
-        try { sheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { sheet.hideSheet(); }
-      }
-    } 
-    else if (mode === "GWA") {
-      if (name === "FINAL CONSOLIDATED") {
-        sheet.showSheet();
-      } else {
-        try { sheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { sheet.hideSheet(); }
-      }
+    if (name === "Learner's Name") sheet.showSheet(); // ALWAYS VISIBLE
+    else if (["1Q", "2Q", "3Q", "4Q"].includes(mode) && name.startsWith(mode + " ")) sheet.showSheet();
+    else if (mode === "SUMMARY" && name.startsWith("SUMMARY_")) sheet.showSheet();
+    else if (mode === "GWA" && name === "FINAL CONSOLIDATED") sheet.showSheet();
+  });
+
+  // 3. Activate a target sheet
+  if (targetSheet) {
+    targetSheet.showSheet();
+    ss.setActiveSheet(targetSheet);
+  } else {
+    ss.setActiveSheet(ss.getSheetByName("Learner's Name"));
+  }
+
+  // 4. HIDE everything else
+  sheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Learner's Name") return; // Skip hiding
+    
+    let shouldKeep = false;
+    if (["1Q", "2Q", "3Q", "4Q"].includes(mode) && name.startsWith(mode + " ")) shouldKeep = true;
+    else if (mode === "SUMMARY" && name.startsWith("SUMMARY_")) shouldKeep = true;
+    else if (mode === "GWA" && name === "FINAL CONSOLIDATED") shouldKeep = true;
+
+    if (!shouldKeep) {
+      try { sheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { sheet.hideSheet(); }
     }
   });
+  return "Success";
 }
 
 /**
