@@ -8,7 +8,7 @@
 function showClassRecordUI() {
   const template = HtmlService.createTemplateFromFile('30_ClassRecordForm');
   const html = template.evaluate()
-      .setWidth(850)
+      .setWidth(700)
       .setHeight(650)
       .setTitle(' ');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
