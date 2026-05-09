@@ -12,6 +12,8 @@ function onOpen() {
       .addItem('Generate Academic Awards', 'showAwardsUI')
       .addSeparator()
       .addItem('Navigation Control Center', 'showNavigationUI')
+      .addSeparator()
+      .addItem('Contact Premium Support', 'showSupportUI')
       .addToUi();
 }
 
