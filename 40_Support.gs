@@ -28,7 +28,11 @@ function processSupportTicket(ticketData) {
       // Decode Base64 stream from the frontend
       const contentType = ticketData.fileData.substring(5, ticketData.fileData.indexOf(';'));
       const base64Data = ticketData.fileData.substring(ticketData.fileData.indexOf('base64,') + 7);
-      const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), contentType, ticketData.fileName);
+      // Smart Naming: YYYY-MM-DD_HH-mm - Ticket Attachment - Original Name
+      const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HH-mm");
+      const smartFileName = `${dateStr} - Ticket Attachment - ${ticketData.fileName}`;
+      
+      const blob = Utilities.newBlob(Utilities.base64Decode(base64Data), contentType, smartFileName);
       
       const file = folder.createFile(blob);
       fileUrl = file.getUrl();
