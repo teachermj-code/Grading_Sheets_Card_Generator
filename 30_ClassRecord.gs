@@ -123,10 +123,24 @@ function checkSequence(targetQuarter) {
 }
 
 function getExistingGradeSection() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("FINAL CONSOLIDATED");
-  if (!sheet) return "";
-  const val = sheet.getRange("F1").getValue().toString();
-  return val.replace("GRADE & SECTION:", "").trim();
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Search from newest to oldest to guarantee we find the latest record
+    const possibleSheets = ["4Q CONSOL GRADE", "3Q CONSOL GRADE", "2Q CONSOL GRADE", "1Q CONSOL GRADE", "FINAL CONSOLIDATED"];
+    
+    for (let name of possibleSheets) {
+      const sheet = ss.getSheetByName(name);
+      if (sheet) {
+        const val = sheet.getRange("F1").getValue().toString();
+        if (val && val.includes("GRADE & SECTION:")) {
+          return val.replace("GRADE & SECTION:", "").trim();
+        }
+      }
+    }
+    return "";
+  } catch (e) {
+    return ""; // Fail silently so the UI just defaults to empty
+  }
 }
 
 function performArchiveStep(prevPrefix) {

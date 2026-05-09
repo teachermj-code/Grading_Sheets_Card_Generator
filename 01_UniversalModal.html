@@ -124,10 +124,10 @@
     // Expose callback globally so the inline button can trigger it
     window._tempConfirmCallback = onConfirmCallback;
     
-    uniAct.innerHTML = `
-      <button class="btn-modal-secondary" onclick="closeUniversalModal()">Cancel</button>
-      <button class="btn-modal-primary" style="background:var(--orange)" onclick="window._tempConfirmCallback(); closeUniversalModal();">${confirmBtnText}</button>
-    `;
+uniAct.innerHTML = `
+        <button class="btn-modal-secondary" onclick="closeUniversalModal()">Cancel</button>
+        <button class="btn-modal-primary" style="background:var(--orange)" onclick="closeUniversalModal(); window._tempConfirmCallback();">${confirmBtnText}</button>
+      `;
     uniModal.classList.add('active');
   }
 </script>

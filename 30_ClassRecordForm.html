@@ -93,15 +93,20 @@
   document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
 
 // Auto-Fetch Existing Grade & Section and Lock it
-  google.script.run.withSuccessHandler(function(gs) {
-    if (gs) {
-      const gsInput = document.getElementById('gradeSection');
-      gsInput.value = gs;
-      gsInput.disabled = true; // Lock the input
-      gsInput.parentElement.style.background = "#f8fafc"; // Visual indicator it is locked
-      validateForm(); // Instantly validate so button unlocks
-    }
-  }).getExistingGradeSection();
+  google.script.run
+    .withSuccessHandler(function(gs) {
+      if (gs && gs !== "") {
+        const gsInput = document.getElementById('gradeSection');
+        gsInput.value = gs;
+        gsInput.readOnly = true; // readOnly ensures the value is kept safe but still accessible
+        gsInput.parentElement.style.background = "#f8fafc"; 
+        validateForm(); 
+      }
+    })
+    .withFailureHandler(function(err) {
+      console.warn("Auto-fetch skipped: " + err.message);
+    })
+    .getExistingGradeSection();
 
   // Load dynamic subjects via utility function
   google.script.run.withSuccessHandler(function(subjects) {
@@ -136,10 +141,13 @@ function triggerMasterReset() {
       "Reset All", 
       function() {
         showUniversalLoading("Master Reset in Progress", "Erasing all student records. Please wait...");
-        google.script.run
-          .withSuccessHandler(msg => showUniversalSuccess("Reset Complete", msg))
-          .withFailureHandler(err => showUniversalWarning("Reset Failed", err.message, "Understood", () => {}))
-          .resetSpreadsheet();
+        // Force browser to paint the loading UI before calling the server
+        setTimeout(() => {
+          google.script.run
+            .withSuccessHandler(msg => showUniversalSuccess("Reset Complete", msg))
+            .withFailureHandler(err => showUniversalWarning("Reset Failed", err.message, "Understood", () => {}))
+            .resetSpreadsheet();
+        }, 150);
       }
     );
   }
@@ -152,10 +160,13 @@ function triggerMasterReset() {
       "Clear Data", 
       function() {
         showUniversalLoading("Clearing Quarter", `Deleting sheets for ${q}. Please wait...`);
-        google.script.run
-          .withSuccessHandler(msg => showUniversalSuccess("Quarter Cleared", msg))
-          .withFailureHandler(err => showUniversalWarning("Clear Failed", err.message, "Understood", () => {}))
-          .deleteQuarterSheets(q);
+        // Force browser to paint the loading UI before calling the server
+        setTimeout(() => {
+          google.script.run
+            .withSuccessHandler(msg => showUniversalSuccess("Quarter Cleared", msg))
+            .withFailureHandler(err => showUniversalWarning("Clear Failed", err.message, "Understood", () => {}))
+            .deleteQuarterSheets(q);
+        }, 150);
       }
     );
   }
@@ -188,24 +199,27 @@ function submitBatch() {
       .checkSequence(quarter);
   }
 
-  function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
+function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true;
 
-    // Package the data
     const selections = [];
     document.querySelectorAll('.include-cb').forEach(cb => {
       if (cb.checked) selections.push({ subject: cb.getAttribute('data-sub'), hasExam: cb.closest('.subject-card').querySelector('.exam-cb').checked });
     });
     const data = { gradeSection: document.getElementById('gradeSection').value, quarter: targetQuarter, selections: selections };
 
-    // STEP 2: Archive (If required)
     if (prevPrefix) {
       btn.innerText = `Hiding & Locking ${prevName} sheets...`;
-      showUniversalLoading("Securing Records", `Hiding & Locking ${prevName} sheets...`);
-      google.script.run
-        .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
-        .performArchiveStep(prevPrefix);
+      showUniversalLoading("Securing Records", `Hiding & Locking ${prevName} sheets for security...`);
+      
+      // Delay server call by 150ms so the loading SVG animation can render on screen
+      setTimeout(() => {
+        google.script.run
+          .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
+          .performArchiveStep(prevPrefix);
+      }, 150);
+      
     } else {
       triggerSheetCreation(btn, data, targetQuarter);
     }
