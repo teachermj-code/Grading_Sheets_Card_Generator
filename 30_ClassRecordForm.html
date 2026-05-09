@@ -92,10 +92,13 @@
 // Set copyright from global standard
   document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
 
-  // Auto-Fetch Existing Grade & Section
+// Auto-Fetch Existing Grade & Section and Lock it
   google.script.run.withSuccessHandler(function(gs) {
     if (gs) {
-      document.getElementById('gradeSection').value = gs;
+      const gsInput = document.getElementById('gradeSection');
+      gsInput.value = gs;
+      gsInput.disabled = true; // Lock the input
+      gsInput.parentElement.style.background = "#f8fafc"; // Visual indicator it is locked
       validateForm(); // Instantly validate so button unlocks
     }
   }).getExistingGradeSection();
@@ -126,14 +129,16 @@
     }
   }
 
-  function triggerMasterReset() {
+function triggerMasterReset() {
     showUniversalWarning(
       "Master Reset", 
       "Erase all students' records? This cannot be undone.", 
       "Reset All", 
       function() {
+        showUniversalLoading("Master Reset in Progress", "Erasing all student records. Please wait...");
         google.script.run
           .withSuccessHandler(msg => showUniversalSuccess("Reset Complete", msg))
+          .withFailureHandler(err => showUniversalWarning("Reset Failed", err.message, "Understood", () => {}))
           .resetSpreadsheet();
       }
     );
@@ -146,8 +151,10 @@
       `Delete all students' records for ${q}?`, 
       "Clear Data", 
       function() {
+        showUniversalLoading("Clearing Quarter", `Deleting sheets for ${q}. Please wait...`);
         google.script.run
           .withSuccessHandler(msg => showUniversalSuccess("Quarter Cleared", msg))
+          .withFailureHandler(err => showUniversalWarning("Clear Failed", err.message, "Understood", () => {}))
           .deleteQuarterSheets(q);
       }
     );
@@ -157,6 +164,9 @@ function submitBatch() {
     const btn = document.getElementById('submitBtn');
     btn.disabled = true; 
     btn.innerText = 'Checking Sequence...';
+    
+    // Show loading modal immediately
+    showUniversalLoading("Validating Setup", "Checking quarter sequence...");
 
     const quarter = document.getElementById('quarter').value;
 
@@ -192,6 +202,7 @@ function submitBatch() {
     // STEP 2: Archive (If required)
     if (prevPrefix) {
       btn.innerText = `Hiding & Locking ${prevName} sheets...`;
+      showUniversalLoading("Securing Records", `Hiding & Locking ${prevName} sheets...`);
       google.script.run
         .withSuccessHandler(() => { triggerSheetCreation(btn, data, targetQuarter); })
         .performArchiveStep(prevPrefix);
@@ -203,6 +214,8 @@ function submitBatch() {
   function triggerSheetCreation(btn, data, targetQuarter) {
     // STEP 3: Generate Current Quarter
     btn.innerText = `Creating ${targetQuarter} Grading Sheets...`;
+    showUniversalLoading("Generating Sheets", `Creating ${targetQuarter} grading sheets. This may take a moment...`);
+    
     google.script.run
       .withSuccessHandler(() => {
         const customAction = `<button class="btn-modal-primary" onclick="google.script.host.close()">Close App</button>`;
@@ -214,6 +227,7 @@ function submitBatch() {
       })
       .processBatchForm(data);
   }
+  
 </script>
 </body>
 </html>
