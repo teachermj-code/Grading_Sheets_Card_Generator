@@ -9,7 +9,7 @@ function showSupportUI() {
   const template = HtmlService.createTemplateFromFile('40_SupportForm');
   const html = template.evaluate()
       .setWidth(450)
-      .setHeight(550)
+      .setHeight(650) // Increased from 550 to 650 to fit the button
       .setTitle(' ');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
