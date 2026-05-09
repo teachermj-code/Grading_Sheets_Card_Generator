@@ -183,7 +183,7 @@ function submitBatch() {
 
     const quarter = document.getElementById('quarter').value;
 
-    // STEP 1: Sequence Check
+// STEP 1: Sequence Check
     google.script.run
       .withSuccessHandler(res => {
         if (!res.allowed) {
@@ -191,15 +191,22 @@ function submitBatch() {
           showUniversalWarning("Generation Blocked", res.msg, "Understood", () => {});
         } else if (res.needsConfirm) {
           btn.disabled = false; btn.innerText = 'Generate Grading Sheets';
-          showUniversalWarning("Lock Previous Quarter", res.msg, "Lock & Proceed", function() {
-            executePremiumGeneration(quarter, res.prevPrefix, res.prevName);
+          
+          // Determine dynamically if this is an Overwrite warning or a Lock warning
+          const title = res.isOverwrite ? "Overwrite Warning" : "Lock Previous Quarter";
+          const btnText = res.isOverwrite ? "Proceed & Delete Data" : "Lock & Proceed";
+          
+          // If overwriting, we don't pass the prevPrefix because we are just recreating the current quarter
+          const prefixToPass = res.isOverwrite ? null : res.prevPrefix;
+          
+          showUniversalWarning(title, res.msg, btnText, function() {
+            executePremiumGeneration(quarter, prefixToPass, res.prevName);
           });
         } else {
           executePremiumGeneration(quarter, null, null);
         }
       })
       .checkSequence(quarter);
-  }
 
 function executePremiumGeneration(targetQuarter, prevPrefix, prevName) {
     const btn = document.getElementById('submitBtn');

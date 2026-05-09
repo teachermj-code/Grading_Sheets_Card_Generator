@@ -104,8 +104,20 @@ function checkSequence(targetQuarter) {
   const prefixes = ["1Q", "2Q", "3Q", "4Q"];
   
   const targetIndex = sequence.indexOf(targetQuarter);
-  if (targetIndex === 0) return { allowed: true, needsConfirm: false }; 
+  const targetPrefix = prefixes[targetIndex];
   
+  // 1. Check if the current target quarter already exists
+  const targetExists = ss.getSheetByName(targetPrefix + " CONSOL GRADE") !== null;
+
+  // 2. Logic for First Quarter
+  if (targetIndex === 0) {
+    if (targetExists) {
+      return { allowed: true, needsConfirm: true, isOverwrite: true, msg: `${targetQuarter} sheets already exist. Proceeding will PERMANENTLY DELETE all recorded data for this quarter. Proceed?` };
+    }
+    return { allowed: true, needsConfirm: false }; 
+  }
+  
+  // 3. Logic for 2Q, 3Q, 4Q
   const prevPrefix = prefixes[targetIndex - 1];
   const prevName = sequence[targetIndex - 1];
   const prevConsol = ss.getSheetByName(prevPrefix + " CONSOL GRADE");
@@ -113,9 +125,17 @@ function checkSequence(targetQuarter) {
   if (!prevConsol) {
     return { allowed: false, msg: "Access Denied: You must generate " + prevName + " records before starting " + targetQuarter + "." };
   }
+
+  // 4. If previous quarter is valid, but target quarter already exists
+  if (targetExists) {
+    return { allowed: true, needsConfirm: true, isOverwrite: true, msg: `${targetQuarter} sheets already exist. Proceeding will PERMANENTLY DELETE all recorded data for this quarter. Proceed?` };
+  }
+
+  // 5. Standard transition (e.g., locking 1Q to generate 2Q)
   return { 
     allowed: true, 
     needsConfirm: true, 
+    isOverwrite: false,
     prevName: prevName, 
     prevPrefix: prevPrefix,
     msg: `Generating ${targetQuarter} will automatically HIDE and LOCK all ${prevName} sheets for security. Proceed?` 
