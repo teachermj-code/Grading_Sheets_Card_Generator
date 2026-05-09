@@ -12,7 +12,7 @@ function showAwardsUI() {
   const template = HtmlService.createTemplateFromFile('20_AwardsForm');
   const html = template.evaluate()
       .setWidth(400)
-      .setHeight(550)
+      .setHeight(450)
       .setTitle(' ');
   SpreadsheetApp.getUi().showModalDialog(html, ' ');
 }
