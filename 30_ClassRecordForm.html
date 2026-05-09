@@ -92,14 +92,16 @@
 // Set copyright from global standard
   document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ';
 
-// Auto-Fetch Existing Grade & Section and Lock it
+// Auto-Fetch Existing Grade & Section from A1 and Lock it
   google.script.run
     .withSuccessHandler(function(gs) {
-      if (gs && gs !== "") {
+      if (gs && gs.trim() !== "") {
         const gsInput = document.getElementById('gradeSection');
         gsInput.value = gs;
-        gsInput.readOnly = true; // readOnly ensures the value is kept safe but still accessible
+        gsInput.readOnly = true; // Locks the input field safely
         gsInput.parentElement.style.background = "#f8fafc"; 
+        
+        // Force the validation regex to run so the Generate button enables
         validateForm(); 
       }
     })
