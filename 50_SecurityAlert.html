@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- Pull in your premium styling -->
+  <?!= include('02_GlobalStyles'); ?>
+  <?!= include('01_UniversalModal'); ?>
+  
+  <style>
+    /* Reset body so the modal perfectly centers in the Google Apps Script iframe */
+    body { 
+      background: var(--bg); 
+      margin: 0; 
+      padding: 0; 
+      height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+
+  <script>
+    // 1. Auto-fire the warning modal the millisecond this window opens
+    window.onload = function() {
+      showUniversalWarning(
+        'Access Denied', 
+        'That sheet is a protected system template. To prevent breaking the system, manual editing is disabled.', 
+        'Acknowledge', 
+        () => {
+          // 2. When they click acknowledge, close the Google Sheets dialog box entirely
+          google.script.host.close();
+        }
+      );
+    };
+
+    // Override the default "Cancel" button behavior so it also closes the window
+    const originalClose = closeUniversalModal;
+    closeUniversalModal = function() {
+      originalClose();
+      google.script.host.close();
+    }
+  </script>
+</body>
+</html>

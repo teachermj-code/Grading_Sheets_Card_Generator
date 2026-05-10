@@ -254,16 +254,35 @@ function updateConsolidatedHeader(gradeSection) {
 }
 
 /**
- * SNAP-BACK SECURITY: Monitors for unauthorized unhiding
+ * SNAP-BACK SECURITY: Monitors for unauthorized edits on protected sheets
  */
 function onEdit(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const activeSheet = ss.getActiveSheet();
-  const name = activeSheet.getName();
-  const forbidden = ["TEMPLATE", "Learner's Name", "SUMMARY_", "FINAL CONSOLIDATED"];
+  const activeName = activeSheet.getName();
   
-  if (forbidden.some(f => name.includes(f))) {
-    try { activeSheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { activeSheet.hideSheet(); }
-    SpreadsheetApp.getUi().alert("⚠️ SYSTEM SECURITY\n\nThis sheet is protected.");
+  // Dynamic list: Any sheet containing these words will trigger the trap
+  const forbiddenKeywords = ["TEMPLATE","W_Exam", "WO_Exam", "CONSOL GRADE", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE","RC_MASTER_DATA", "SUMMARY_", "FINAL CONSOLIDATED"];
+  
+  
+  // Check if the current sheet name contains any of the forbidden keywords
+  const isForbidden = forbiddenKeywords.some(keyword => activeName.includes(keyword));
+  
+  if (isForbidden) {
+    // 1. Instantly hide the forbidden sheet (Native Google Sheets method)
+    activeSheet.hideSheet();
+    
+    // 2. "Boot" the user back to a safe sheet
+    try {
+      const safeSheet = ss.getSheetByName("Report Card Setup");
+      if (safeSheet) {
+        safeSheet.activate();
+      }
+    } catch (err) {
+      // Failsafe: Do nothing if the safe sheet is missing
+    }
+    
+    // 3. Fire the Premium Modal Overlay (Defined in 00_Core.gs)
+    showSecurityAlertUI();
   }
 }

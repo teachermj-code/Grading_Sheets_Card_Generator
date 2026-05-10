@@ -6,8 +6,11 @@
  */
 
 function onOpen() {
-  // 1. Run the security protocol immediately upon opening
+// 1. Run the security protocol to hide system templates
   secureSystemTemplates();
+
+  // 2. Run the enforcement protocol to show and arrange core sheets
+  enforceCoreSheets();
 
   // 2. Build the Top Navigation Menu
   SpreadsheetApp.getUi()
@@ -97,4 +100,88 @@ function secureSystemTemplates() {
   });
   
   return "Security Protocol Active.";
+}
+
+/**
+ * AGGRESSIVE SECURITY WATCHER
+ * Triggers every time a user clicks a cell or changes sheets.
+ */
+function onSelectionChange(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const activeSheet = ss.getActiveSheet();
+  const activeName = activeSheet.getName();
+  
+  // List of sheets that must NEVER be seen or clicked by the user
+  const forbiddenSheets = [
+    "W_Exam", 
+    "WO_Exam", 
+    "CONSOL GRADE", 
+    "HOMEROOM GUIDANCE", 
+    "HOMEROOM GUIDANCE LETTER GRADE",
+    "RC_MASTER_DATA"
+  ];
+  
+  // If the user is currently looking at a forbidden sheet
+  if (forbiddenSheets.includes(activeName)) {
+    
+    // 1. Instantly hide the forbidden sheet
+    activeSheet.hideSheet();
+    
+    // 2. "Boot" the user back to a safe sheet
+    try {
+      const safeSheet = ss.getSheetByName("Report Card Setup");
+      if (safeSheet) {
+        safeSheet.activate();
+      }
+    } catch (err) {
+      // Failsafe if Report Card Setup is missing
+    }
+    
+    // 3. Fire the Premium Modal Overlay instead of a toast
+    showSecurityAlertUI();
+  }
+}
+
+/**
+ * Launches the Universal Modal Warning for Access Denied events
+ */
+function showSecurityAlertUI() {
+  const html = HtmlService.createTemplateFromFile('50_SecurityAlert')
+      .evaluate()
+      .setWidth(450)
+      .setHeight(350);
+      
+  // Pass a blank space " " to hide the default Google title bar for a cleaner look
+  SpreadsheetApp.getUi().showModalDialog(html, " "); 
+}
+
+/**
+ * Enforces the visibility and exact order of the core user sheets.
+ */
+function enforceCoreSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  
+  // The exact order you want them arranged left-to-right
+  const coreSheets = ["Report Card Setup", "RC_Attendance", "Learner's Name"];
+  
+  coreSheets.forEach((sheetName, index) => {
+    const sheet = ss.getSheetByName(sheetName);
+    if (sheet) {
+      // 1. Force the sheet to be visible
+      if (sheet.isSheetHidden()) {
+        sheet.showSheet();
+      }
+      
+      // 2. Move the sheet to its strict position
+      // moveActiveSheet uses 1-based indexing, so index 0 becomes position 1
+      ss.setActiveSheet(sheet);
+      ss.moveActiveSheet(index + 1);
+    }
+  });
+  
+  // 3. Always land the user safely on the Setup sheet when finished
+  const landingSheet = ss.getSheetByName(coreSheets[0]);
+  if (landingSheet) {
+    landingSheet.activate();
+  }
 }
