@@ -7,12 +7,11 @@
 
 const RC_CONFIG = {
   templateMap: {
-    "1st Quarter": "1dTZ4VtUiid0gp5Oe5wQUIY_-TK9SyDrwIArGFvl9tvk", // Template A
-    "2nd Quarter": "1dTZ4VtUiid0gp5Oe5wQUIY_-TK9SyDrwIArGFvl9tvk", // Template A
-    "3rd Quarter": "1dTZ4VtUiid0gp5Oe5wQUIY_-TK9SyDrwIArGFvl9tvk", // Template A
-    "4th Quarter": "15EtOUpv2bavC6CCfC1xvZYqpuj9kd4Bcl7r0b2FBa0k"  // Template B
-  },
-  outputFolderId: "1M5Oa5iXR19P_Sp2o4WrltdLc4sRfVzCs"
+    "1st Quarter": "1CQR4GG4mS8SYHAcXU4r6k4GxVIi8sHxvBqLCBj2HGV8", // Template A
+    "2nd Quarter": "1CQR4GG4mS8SYHAcXU4r6k4GxVIi8sHxvBqLCBj2HGV8", // Template A
+    "3rd Quarter": "1CQR4GG4mS8SYHAcXU4r6k4GxVIi8sHxvBqLCBj2HGV8", // Template A
+    "4th Quarter": "18IparW4IavgaY-GT6jkh82Lk5YDzFsDVPSeWfUqfhq8"  // Template B
+  }
 };
 
 /**
@@ -46,10 +45,8 @@ function processReportCards(gradingPeriod) {
 
     const headers = data[0]; // Row 1: The tags (Name, F1, 1, Jul1, etc.)
     
-    // 2. Setup Folder & Template
-    const parentFolder = DriveApp.getFolderById(RC_CONFIG.outputFolderId);
-    const subFolderName = `Report Cards - ${gradingPeriod} - Generated ${new Date().toLocaleDateString()}`;
-    const targetFolder = parentFolder.createFolder(subFolderName);
+// 2. Setup Folder & Template (Dynamic Path)
+    const targetFolder = getDynamicOutputFolder(gradingPeriod, true);
     const templateId = RC_CONFIG.templateMap[gradingPeriod];
     const templateFile = DriveApp.getFileById(templateId);
 
@@ -123,9 +120,17 @@ function generateSinglePDF(dataMap, templateFile, folder, studentName, q) {
     body.replaceText("<<" + tag + ">>", String(value));
   }
 
-  doc.saveAndClose();
+doc.saveAndClose();
   const pdf = DriveApp.getFileById(copy.getId()).getAs("application/pdf");
-  folder.createFile(pdf).setName(`${studentName} - ${q}.pdf`);
+  const fileName = `${studentName} - ${q}.pdf`;
+  
+  // Overwrite logic: Find and trash old PDF with the exact same name
+  const existingFiles = folder.searchFiles(`title = '${fileName}' and trashed = false`);
+  while (existingFiles.hasNext()) {
+    existingFiles.next().setTrashed(true);
+  }
+  
+  folder.createFile(pdf).setName(fileName);
   DriveApp.getFileById(copy.getId()).setTrashed(true);
 }
 
@@ -200,19 +205,51 @@ function enforceRCSheetPrivacy() {
     master.hideSheet();
   }
 }
-
 /**
- * Checks Google Drive to see if a folder for this Quarter already exists.
+ * Checks Google Drive to see if the dynamic Quarter folder already exists.
  */
 function checkIfCardsExist(gradingPeriod) {
   try {
-    const parentFolder = DriveApp.getFolderById(RC_CONFIG.outputFolderId);
-    // Searches for any folder containing the quarter name
-    const folders = parentFolder.searchFolders(`title contains 'Report Cards - ${gradingPeriod}'`);
-    
-    return { exists: folders.hasNext() };
+    const folder = getDynamicOutputFolder(gradingPeriod, false);
+    return { exists: folder !== null };
   } catch (e) {
     console.error(e);
-    return { exists: false }; // Defaults to false if Drive is empty or errors out
+    return { exists: false };
   }
+}
+
+/**
+ * Helper to dynamically find or create the target folder based on the Spreadsheet's location.
+ */
+function getDynamicOutputFolder(gradingPeriod, createIfMissing) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ssFile = DriveApp.getFileById(ss.getId());
+  const parents = ssFile.getParents();
+  if (!parents.hasNext()) throw new Error("Spreadsheet is not in a Drive folder.");
+  
+  const parentFolder = parents.next();
+  const mainFolderName = ss.getName() + "'s Report Card";
+  const quarterFolderName = gradingPeriod + " Grades";
+  
+  // 1. Check for the Main Folder (e.g., "6 - Tausug's Report Card")
+  let mainFolder;
+  const mainFolderIter = parentFolder.searchFolders(`title = '${mainFolderName}' and trashed = false`);
+  if (mainFolderIter.hasNext()) {
+    mainFolder = mainFolderIter.next();
+  } else {
+    if (!createIfMissing) return null;
+    mainFolder = parentFolder.createFolder(mainFolderName);
+  }
+  
+  // 2. Check for the Quarter Folder (e.g., "1st Quarter Grades")
+  let quarterFolder;
+  const qFolderIter = mainFolder.searchFolders(`title = '${quarterFolderName}' and trashed = false`);
+  if (qFolderIter.hasNext()) {
+    quarterFolder = qFolderIter.next();
+  } else {
+    if (!createIfMissing) return null;
+    quarterFolder = mainFolder.createFolder(quarterFolderName);
+  }
+  
+  return quarterFolder;
 }
