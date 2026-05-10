@@ -88,43 +88,71 @@
     </a>
   </div>
 
-  <script>
+<script>
     // 1. Initialize Footer Branding
     document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' MSD - COMPILED BY TEACHER MJ';
 
-    // 2. Controller Logic
+    // 2. The Initial Checker
     function triggerGeneration() {
       const grading = document.getElementById('grading').value;
       
-      // FIRE THE UNIVERSAL LOADING MODAL
+      // Step 1: Show a quick loading state while checking Google Drive
+      showUniversalLoading('Verifying Directory...', 'Checking Drive for existing files...');
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.exists) {
+            // It ALREADY EXISTS -> Show Warning Confirmation
+            showUniversalWarning(
+              'Duplicate Detected', 
+              'You have already generated ' + grading + ' report cards. Do you want to generate a new set anyway?', 
+              'Generate New Set', 
+              () => executeMerge(grading) // Triggers actual generation if they click Yes
+            );
+          } else {
+            // It does NOT exist -> Ask standard confirmation before starting heavy task
+            showUniversalWarning(
+              'Confirm Generation', 
+              'You are about to generate SF9 PDFs for ' + grading + '. This process will take a few minutes. Proceed?', 
+              'Yes, Generate PDFs', 
+              () => executeMerge(grading) // Triggers actual generation if they click Yes
+            );
+          }
+        })
+        .withFailureHandler(function(err) {
+          showUniversalWarning('System Error', err.message, 'Acknowledge', () => closeUniversalModal());
+        })
+        .checkIfCardsExist(grading);
+    }
+
+    // 3. The Actual PDF Generator
+    function executeMerge(grading) {
+      // Step 2: Fire the "What is happening" Modal Overlay
       showUniversalLoading(
         'Compiling ' + grading, 
         'Merging data from the Master Bridge into your Google Doc templates. Please do not close this window.'
       );
 
-      // EXECUTE BACKEND PROCESS
+      // Execute backend generation
       google.script.run
         .withSuccessHandler(function(response) {
           if (response.status === "success") {
-            // Build custom buttons for the Success Modal
             const customActionHtml = `
               <button class="btn-modal-secondary" onclick="closeUniversalModal()">Close</button>
               <button class="btn-modal-primary" onclick="window.open('${response.folderUrl}', '_blank'); closeUniversalModal();">📂 Open Folder</button>
             `;
             showUniversalSuccess('Generation Complete!', response.message, customActionHtml);
           } else {
-            // Handle logical errors (like missing data) gracefully
-            showUniversalWarning('Process Halted', response.message, 'Acknowledge', () => {});
+            showUniversalWarning('Process Halted', response.message, 'Acknowledge', () => closeUniversalModal());
           }
         })
         .withFailureHandler(function(err) {
-          // Handle hard system crashes
-          showUniversalWarning('System Error', err.message, 'Acknowledge', () => {});
+          showUniversalWarning('System Error', err.message, 'Acknowledge', () => closeUniversalModal());
         })
         .processReportCards(grading);
     }
 
-    // Support Link Fallback (if not defined elsewhere)
+    // Support Link Fallback
     function transitionToSupport() {
       window.open('https://mail.google.com/chat/u/0/#chat/dm/teachermjcbb@gmail.com', '_blank');
     }

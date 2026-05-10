@@ -200,3 +200,19 @@ function enforceRCSheetPrivacy() {
     master.hideSheet();
   }
 }
+
+/**
+ * Checks Google Drive to see if a folder for this Quarter already exists.
+ */
+function checkIfCardsExist(gradingPeriod) {
+  try {
+    const parentFolder = DriveApp.getFolderById(RC_CONFIG.outputFolderId);
+    // Searches for any folder containing the quarter name
+    const folders = parentFolder.searchFolders(`title contains 'Report Cards - ${gradingPeriod}'`);
+    
+    return { exists: folders.hasNext() };
+  } catch (e) {
+    console.error(e);
+    return { exists: false }; // Defaults to false if Drive is empty or errors out
+  }
+}
