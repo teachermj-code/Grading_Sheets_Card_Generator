@@ -226,7 +226,7 @@ function archiveQuarter(prefix) {
 
 function secureSystemTemplates() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const templates = ["W_Exam", "WO_Exam", "CONSOL GRADE", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE"];
+  const templates = ["W_Exam", "WO_Exam", "CONSOL GRADE", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE","RC_MASTER_DATA"];
   templates.forEach(name => {
     const sheet = ss.getSheetByName(name);
     if (sheet) {
@@ -241,7 +241,7 @@ function secureSystemTemplates() {
 
 function resetSpreadsheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const protectedSheets = ["Learner's Name", "W_Exam", "WO_Exam", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE", "CONSOL GRADE"];
+  const protectedSheets = ["Learner's Name", "W_Exam", "WO_Exam", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE", "CONSOL GRADE", "RC_Attendance", "Report Card Setup", "RC_MASTER_DATA"];
   let deletedCount = 0;
 
   ss.getSheets().forEach(sheet => {
