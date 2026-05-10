@@ -1,0 +1,85 @@
+<!-- 
+  ==========================================
+  02_GlobalStyles.html
+  PURPOSE: Master CSS for all Modals and Forms
+  ==========================================
+-->
+<style>
+  :root {
+    --brand-teal: #00b6c7;
+    --brand-teal-dark: #043345;
+    --brand-orange: #ff8c42;
+    --border-color: #e2e8f0;
+    --bg-light: #f8fafc;
+  }
+
+  /* Universal Typeface */
+  body, button, input, select, textarea {
+    font-family: 'Tahoma', sans-serif;
+  }
+
+  /* =========================================
+     UNIVERSAL BUTTON HOVER EFFECTS 
+     ========================================= */
+  button {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+
+  /* Target any primary submit/action buttons */
+  .btn-primary, button[type="submit"] {
+    background-color: var(--brand-teal);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .btn-primary:hover, button[type="submit"]:hover {
+    background-color: var(--brand-teal-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 182, 199, 0.2);
+  }
+
+  .btn-primary:active, button[type="submit"]:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 182, 199, 0.1);
+  }
+
+  /* =========================================
+     UNIVERSAL FORM INPUT HOVER & FOCUS EFFECTS
+     ========================================= */
+  input[type="text"], input[type="number"], select, textarea {
+    transition: all 0.2s ease-in-out;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-light);
+    border-radius: 6px;
+    padding: 10px;
+    outline: none;
+  }
+
+  /* Hover State for Inputs */
+  input[type="text"]:hover, input[type="number"]:hover, select:hover, textarea:hover {
+    border-color: var(--brand-teal);
+    background-color: #ffffff;
+  }
+
+  /* Active/Focus State for Inputs (The "Premium" Glow) */
+  input[type="text"]:focus, input[type="number"]:focus, select:focus, textarea:focus {
+    border-color: var(--brand-teal);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 182, 199, 0.15);
+  }
+
+  /* Universal Checkbox Hover */
+  input[type="checkbox"] {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  
+  input[type="checkbox"]:hover {
+    transform: scale(1.1);
+  }
+</style>
