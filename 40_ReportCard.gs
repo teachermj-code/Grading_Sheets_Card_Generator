@@ -76,9 +76,9 @@ function processReportCards(gradingPeriod) {
       generateSinglePDF(studentData, templateFile, targetFolder, studentName, gradingPeriod);
     }
 
-    return { 
+return { 
       status: "success", 
-      message: `Successfully processed ${data.length - 1} cards into: ${subFolderName}`, 
+      message: `Successfully processed cards into: ${targetFolder.getName()}`, 
       folderUrl: targetFolder.getUrl() 
     };
 
@@ -188,10 +188,12 @@ function initializeMasterData() {
   });
 
   // Homeroom Guidance starting at DF2
-  master.getRange("DF2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
-  master.getRange("DU2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
-  master.getRange("EJ2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
-  master.getRange("EY2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
+  master.getRange("DF2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
+  master.getRange("DU2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
+  master.getRange("EJ2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
+  master.getRange("EY2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
+  // Force Google Sheets to instantly calculate all newly injected ArrayFormulas
+  SpreadsheetApp.flush();
 
   master.hideSheet();
   SpreadsheetApp.getUi().alert("Master Bridge Restored. Headers and Columns DC:DE preserved.");
