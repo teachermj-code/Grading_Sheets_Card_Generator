@@ -159,7 +159,7 @@ function initializeSummaries() {
 const quarters = ["1Q", "2Q", "3Q", "4Q"];
     
     // Create a robust wildcard search key based on the normalized subject name
-let searchKey = "*" + subName + "*";
+    let searchKey = "*" + subName + "*";
     if (subName === "MATH") searchKey = "*MATH*";
     else if (subName === "ARALPAN") searchKey = "*ARAL*";
     else if (subName === "P.E." || subName === "PE") searchKey = "*P*E*";
