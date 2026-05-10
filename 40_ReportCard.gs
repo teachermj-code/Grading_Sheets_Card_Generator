@@ -124,8 +124,11 @@ doc.saveAndClose();
   const pdf = DriveApp.getFileById(copy.getId()).getAs("application/pdf");
   const fileName = `${studentName} - ${q}.pdf`;
   
+// Fix: Escape single quotes in the student's name (e.g., O'Connor) to prevent query crash
+  const safeFileName = fileName.replace(/'/g, "\\'");
+  
   // Overwrite logic: Find and trash old PDF with the exact same name
-  const existingFiles = folder.searchFiles(`title = '${fileName}' and trashed = false`);
+  const existingFiles = folder.searchFiles(`title = '${safeFileName}' and trashed = false`);
   while (existingFiles.hasNext()) {
     existingFiles.next().setTrashed(true);
   }
@@ -228,12 +231,17 @@ function getDynamicOutputFolder(gradingPeriod, createIfMissing) {
   if (!parents.hasNext()) throw new Error("Spreadsheet is not in a Drive folder.");
   
   const parentFolder = parents.next();
-  const mainFolderName = ss.getName() + "'s Report Card";
+// Cleaned up naming convention: Removed "'s" to prevent syntax issues and make it look cleaner
+  const mainFolderName = ss.getName() + " Report Cards"; 
   const quarterFolderName = gradingPeriod + " Grades";
   
-  // 1. Check for the Main Folder (e.g., "6 - Tausug's Report Card")
+  // Fix: Escape single quotes in the sheet name to prevent Drive search query crashes
+  const safeMainName = mainFolderName.replace(/'/g, "\\'");
+  const safeQuarterName = quarterFolderName.replace(/'/g, "\\'");
+  
+  // 1. Check for the Main Folder
   let mainFolder;
-  const mainFolderIter = parentFolder.searchFolders(`title = '${mainFolderName}' and trashed = false`);
+  const mainFolderIter = parentFolder.searchFolders(`title = '${safeMainName}' and trashed = false`);
   if (mainFolderIter.hasNext()) {
     mainFolder = mainFolderIter.next();
   } else {
@@ -243,7 +251,7 @@ function getDynamicOutputFolder(gradingPeriod, createIfMissing) {
   
   // 2. Check for the Quarter Folder (e.g., "1st Quarter Grades")
   let quarterFolder;
-  const qFolderIter = mainFolder.searchFolders(`title = '${quarterFolderName}' and trashed = false`);
+const qFolderIter = mainFolder.searchFolders(`title = '${safeQuarterName}' and trashed = false`);
   if (qFolderIter.hasNext()) {
     quarterFolder = qFolderIter.next();
   } else {
