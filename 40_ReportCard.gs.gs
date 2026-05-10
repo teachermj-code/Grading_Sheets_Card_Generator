@@ -111,3 +111,72 @@ function generateSinglePDF(data, templateFile, folder, studentName, q) {
   folder.createFile(pdf).setName(`${studentName} - ${q}.pdf`);
   DriveApp.getFileById(copy.getId()).setTrashed(true);
 }
+
+/**
+ * Injects formulas into RC_MASTER_DATA to make it a "Live" bridge.
+ * Run this once from the editor.
+ */
+function initializeMasterData() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let master = ss.getSheetByName("RC_MASTER_DATA");
+  
+  if (!master) {
+    master = ss.insertSheet("RC_MASTER_DATA");
+  }
+
+  // 1. Clear everything to start fresh
+  master.clear();
+  
+  // 2. Set Headers (Simplified for brevity, ensure your Row 1 matches your full list)
+  // ... (Assume Row 1 is already filled with your 60+ headers)
+
+  // 3. Inject Live Formulas into Row 2
+  
+  // A:J - Setup Data
+  master.getRange("A2").setFormula("=ARRAYFORMULA('Report Card Setup'!A2:J)");
+  
+  // K:AQ - Attendance
+  master.getRange("K2").setFormula("=ARRAYFORMULA(RC_Attendance!B2:AH)");
+
+  // AU:DB - Subject Grades (Smart Mapping)
+  const subjects = [
+    { range: "AU2", sheet: "SUMMARY_FILIPINO" },
+    { range: "AZ2", sheet: "SUMMARY_ENGLISH" },
+    { range: "BE2", sheet: "SUMMARY_MATH" },
+    { range: "BJ2", sheet: "SUMMARY_SCIENCE" },
+    { range: "BO2", sheet: "SUMMARY_ARALPAN" },
+    { range: "BT2", sheet: "SUMMARY_GMRC" },
+    { range: "BY2", sheet: "SUMMARY_HELE" },
+    { range: "CD2", sheet: "SUMMARY_MAPEH" },
+    { range: "CI2", sheet: "SUMMARY_MUSIC" },
+    { range: "CN2", sheet: "SUMMARY_ARTS" },
+    { range: "CS2", sheet: "SUMMARY_P.E." },
+    { range: "CX2", sheet: "SUMMARY_HEALTH" }
+  ];
+
+  subjects.forEach(sub => {
+    master.getRange(sub.range).setFormula(`=IFERROR(ARRAYFORMULA('${sub.sheet}'!C3:G), "")`);
+  });
+
+  // Homeroom Guidance 1-60 (Numerical tags)
+  // These usually start further right in your sheet, adjust column letters as needed
+  master.getRange("DC2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 1-15
+  master.getRange("DR2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 16-30
+  master.getRange("EG2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 31-45
+  master.getRange("EV2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 46-60
+
+  // 4. Hide the sheet
+  master.hideSheet();
+}
+
+/**
+ * SECURITY: Automatically re-hides the master sheet if anyone unhides it.
+ * This runs every time the spreadsheet is opened.
+ */
+function enforceRCSheetPrivacy() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const master = ss.getSheetByName("RC_MASTER_DATA");
+  if (master && !master.isSheetHidden()) {
+    master.hideSheet();
+  }
+}
