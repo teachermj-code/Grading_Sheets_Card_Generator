@@ -90,25 +90,40 @@ function initializeSummaries() {
   const normalizeSub = (name) => {
     if (!name) return "";
     
-    // Strip all spaces and periods so "P.E." and "PE", or "Aral Pan" and "AralPan" become identical to the computer
+    // Strip all spaces and periods
     const raw = name.toString().toUpperCase().replace(/\s/g, "").replace(/\./g, ""); 
     
     // The Dictionary: Catching all variations and returning YOUR official names
     if (["AP", "ARPAN", "ARALPAN", "ARALINGPANLIPUNAN"].includes(raw)) return "ARALPAN";
     if (["PE", "PHYSICALEDUCATION"].includes(raw)) return "P.E.";
     if (["MATH", "MATHS", "MATHEMATICS"].includes(raw)) return "MATH";
+    if (["HG", "HOMEROOM", "HOMEROOMGUIDANCE"].includes(raw)) return "HOMEROOM GUIDANCE";
     
     return name.toString().toUpperCase().trim();
   };
 
   // Normalize subjects and forcefully append MAPEH if missing from raw data
+// Normalize subjects and forcefully append MAPEH and HOMEROOM GUIDANCE if missing from raw data
   let uniqueSubjects = [...new Set(getSubjectList().map(s => normalizeSub(s)))];
+  
   if (!uniqueSubjects.includes("MAPEH")) uniqueSubjects.push("MAPEH");
+  if (!uniqueSubjects.includes("HOMEROOM GUIDANCE")) uniqueSubjects.push("HOMEROOM GUIDANCE");
+
+  // STRICT MASTER ORDER: Forces the Summary tabs to generate in this exact sequence
+  const masterOrder = [
+    "FILIPINO", "ENGLISH", "MATH", "SCIENCE", "ARALPAN", 
+    "GMRC", "HELE", "MAPEH", "MUSIC", "ARTS", "P.E.", "HEALTH", "HOMEROOM GUIDANCE"
+  ];
 
   const sortedSubjects = uniqueSubjects.map(s => [s]).sort((a, b) => {
-    if (a[0] === "MAPEH") return 1;
-    if (b[0] === "MAPEH") return -1;
-    return 0;
+    let indexA = masterOrder.indexOf(a[0]);
+    let indexB = masterOrder.indexOf(b[0]);
+
+    // If a subject isn't found in the master list, push it to the very end
+    if (indexA === -1) indexA = 999;
+    if (indexB === -1) indexB = 999;
+
+    return indexA - indexB;
   });
 
   // 1. CREATE SUBJECT SUMMARIES
@@ -151,6 +166,7 @@ const quarters = ["1Q", "2Q", "3Q", "4Q"];
     if (subName === "MATH") searchKey = "*MATH*";
     else if (subName === "ARALPAN") searchKey = "*ARAL*";
     else if (subName === "P.E." || subName === "PE") searchKey = "*P*E*";
+    else if (subName === "HOMEROOM GUIDANCE") searchKey = "*HOMEROOM*";
 
     for (let r = 0; r < studentNames.length; r++) {
       const row = r + 3;
