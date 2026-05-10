@@ -30,80 +30,97 @@ function showReportCardUI() {
   SpreadsheetApp.getUi().showModalDialog(html, " "); // Blank title for premium look
 }
 
+/**
+ * Optimized Controller: Reads exclusively from the RC_MASTER_DATA bridge.
+ */
 function processReportCards(gradingPeriod) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const qPrefix = gradingPeriod === "1st Quarter" ? "1Q" : gradingPeriod === "2nd Quarter" ? "2Q" : gradingPeriod === "3rd Quarter" ? "3Q" : "4Q";
+    const masterSheet = ss.getSheetByName("RC_MASTER_DATA");
     
-    // 1. Get Data Sources
-    const setupSheet = ss.getSheetByName("Report Card Setup");
-    const attSheet = ss.getSheetByName("RC_Attendance");
-    const consolSheet = ss.getSheetByName(qPrefix + " CONSOL GRADE");
+    if (!masterSheet) throw new Error("RC_MASTER_DATA sheet not found! Please run initializeMasterData first.");
 
-    if (!consolSheet) throw new Error(`Please generate the ${qPrefix} Consol Grade first!`);
-    
-    const setupData = setupSheet.getDataRange().getValues();
-    const attData = attSheet.getDataRange().getValues();
-    const consolData = consolSheet.getDataRange().getValues();
-    
-    const headersSetup = setupData[0];
-    const headersAtt = attData[0];
-    const headersConsol = consolData[0];
+    // 1. Get all data from the bridge sheet
+    const data = masterSheet.getDataRange().getValues();
+    if (data.length < 2) throw new Error("No student data found in RC_MASTER_DATA.");
 
-    // 2. Setup Folder
+    const headers = data[0]; // Row 1: The tags (Name, F1, 1, Jul1, etc.)
+    
+    // 2. Setup Folder & Template
     const parentFolder = DriveApp.getFolderById(RC_CONFIG.outputFolderId);
-    const subFolderName = `Report Cards - ${gradingPeriod} (${new Date().toLocaleDateString()})`;
+    const subFolderName = `Report Cards - ${gradingPeriod} - Generated ${new Date().toLocaleDateString()}`;
     const targetFolder = parentFolder.createFolder(subFolderName);
-    const templateFile = DriveApp.getFileById(RC_CONFIG.templateMap[gradingPeriod]);
+    const templateId = RC_CONFIG.templateMap[gradingPeriod];
+    const templateFile = DriveApp.getFileById(templateId);
 
-    // 3. Loop through students (starting from row 2)
-    for (let i = 1; i < setupData.length; i++) {
-      let studentData = {};
-      const studentName = setupData[i][0];
+    // 3. Loop through every student in the MASTER sheet
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const studentName = row[0]; // Name is in Column A
+      
       if (!studentName) continue;
 
-      // Map Setup Data
-      headersSetup.forEach((h, idx) => studentData[h] = setupData[i][idx]);
+// 4. Create the "Super Object" of all tags for this student
+      let studentData = {};
+      headers.forEach((header, index) => {
+        if (header) {
+          let val = row[index];
+          
+          // FIX: If the cell is empty or null, make it an empty string, NOT a 0
+          if (val === "" || val === null || val === undefined) {
+            studentData[header] = ""; 
+          } else {
+            studentData[header] = val;
+          }
+        }
+      });
 
-      // Map Attendance Data (Match by Name)
-      const attRow = attData.find(row => row[0] === studentName);
-      if (attRow) {
-        headersAtt.forEach((h, idx) => studentData[h] = attRow[idx]);
-      }
-
-      // Map Consol Grades (Match by Name)
-      const consolRow = consolData.find(row => row[1] === studentName); // Name is Col B (index 1)
-      if (consolRow) {
-        headersConsol.forEach((h, idx) => {
-          if (h && h !== "NAME") studentData[h] = consolRow[idx];
-        });
-      }
-
-      // 4. Create the Doc and Replace Tags
+      // 5. Generate the PDF using the Single Source Data
       generateSinglePDF(studentData, templateFile, targetFolder, studentName, gradingPeriod);
     }
 
-    return { status: "success", message: `Generated in: ${subFolderName}`, folderUrl: targetFolder.getUrl() };
+    return { 
+      status: "success", 
+      message: `Successfully processed ${data.length - 1} cards into: ${subFolderName}`, 
+      folderUrl: targetFolder.getUrl() 
+    };
+
   } catch (e) {
+    console.error(e);
     return { status: "error", message: e.message };
   }
 }
 
-/**
- * Handles the actual Tag replacement in the Doc
- */
-function generateSinglePDF(data, templateFile, folder, studentName, q) {
+function generateSinglePDF(dataMap, templateFile, folder, studentName, q) {
   const copy = templateFile.makeCopy(folder);
   const doc = DocumentApp.openById(copy.getId());
   const body = doc.getBody();
 
-  // Replace all keys found in the data object
-  for (let key in data) {
-    const placeholder = `<<${key}>>`;
-    let val = data[key] || "";
-    // Format numbers to avoid decimals in grades like 90.00000001
-    if (typeof val === 'number') val = Math.round(val);
-    body.replaceText(placeholder, String(val));
+// Loop through every tag in the student's data map
+  for (let tag in dataMap) {
+    let value = dataMap[tag];
+    
+    // 1. STRICT CHECK: Only replace with blank if the value is actually empty/null.
+    // This allows the number 0 to be processed as a valid string.
+    if (value === "" || value === null || value === undefined) {
+      body.replaceText("<<" + tag + ">>", "");
+      continue;
+    }
+
+    // 2. FORMAT ACTUAL NUMBERS (Including 0)
+    if (typeof value === 'number') {
+      if (tag.endsWith('G') || tag === 'GA') {
+        // Grades get decimals (e.g., 85.00)
+        value = value.toFixed(2); 
+      } else {
+        // Attendance, Age, and Conduct tags stay as whole numbers
+        // This will turn 0 into "0" instead of blank
+        value = Math.round(value).toString(); 
+      }
+    }
+
+    // 3. Final Replacement
+    body.replaceText("<<" + tag + ">>", String(value));
   }
 
   doc.saveAndClose();
@@ -113,8 +130,7 @@ function generateSinglePDF(data, templateFile, folder, studentName, q) {
 }
 
 /**
- * Injects formulas into RC_MASTER_DATA to make it a "Live" bridge.
- * Run this once from the editor.
+ * Injects formulas into RC_MASTER_DATA without destroying headers or Columns DC:DE.
  */
 function initializeMasterData() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -122,23 +138,28 @@ function initializeMasterData() {
   
   if (!master) {
     master = ss.insertSheet("RC_MASTER_DATA");
+    SpreadsheetApp.getUi().alert("New RC_MASTER_DATA sheet created. Please paste your headers in Row 1.");
+    return;
   }
 
-  // 1. Clear everything to start fresh
-  master.clear();
-  
-  // 2. Set Headers (Simplified for brevity, ensure your Row 1 matches your full list)
-  // ... (Assume Row 1 is already filled with your 60+ headers)
+  const lastRow = master.getMaxRows();
+  const lastCol = master.getMaxColumns();
 
-  // 3. Inject Live Formulas into Row 2
+  if (lastRow > 1) {
+    // 1. Clear Columns A (1) to DB (106)
+    master.getRange(2, 1, lastRow - 1, 106).clear();
+    
+    // 2. Clear from Column DF (110) to the end of the sheet
+    // This leaves DC (107), DD (108), and DE (109) untouched
+    if (lastCol >= 110) {
+      master.getRange(2, 110, lastRow - 1, lastCol - 109).clear();
+    }
+  }
   
-  // A:J - Setup Data
+  // RE-INJECT FORMULAS
   master.getRange("A2").setFormula("=ARRAYFORMULA('Report Card Setup'!A2:J)");
-  
-  // K:AQ - Attendance
   master.getRange("K2").setFormula("=ARRAYFORMULA(RC_Attendance!B2:AH)");
 
-  // AU:DB - Subject Grades (Smart Mapping)
   const subjects = [
     { range: "AU2", sheet: "SUMMARY_FILIPINO" },
     { range: "AZ2", sheet: "SUMMARY_ENGLISH" },
@@ -158,15 +179,14 @@ function initializeMasterData() {
     master.getRange(sub.range).setFormula(`=IFERROR(ARRAYFORMULA('${sub.sheet}'!C3:G), "")`);
   });
 
-  // Homeroom Guidance 1-60 (Numerical tags)
-  // These usually start further right in your sheet, adjust column letters as needed
-  master.getRange("DC2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 1-15
-  master.getRange("DR2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 16-30
-  master.getRange("EG2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 31-45
-  master.getRange("EV2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")"); // 46-60
+  // Homeroom Guidance starting at DF2
+  master.getRange("DF2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
+  master.getRange("DU2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
+  master.getRange("EJ2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
+  master.getRange("EY2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T), \"\")");
 
-  // 4. Hide the sheet
   master.hideSheet();
+  SpreadsheetApp.getUi().alert("Master Bridge Restored. Headers and Columns DC:DE preserved.");
 }
 
 /**
