@@ -103,8 +103,11 @@ function initializeSummaries() {
   };
 
   // Normalize subjects and forcefully append MAPEH if missing from raw data
+// Normalize subjects and forcefully append MAPEH and HOMEROOM GUIDANCE if missing from raw data
   let uniqueSubjects = [...new Set(getSubjectList().map(s => normalizeSub(s)))];
+  
   if (!uniqueSubjects.includes("MAPEH")) uniqueSubjects.push("MAPEH");
+  if (!uniqueSubjects.includes("HOMEROOM GUIDANCE")) uniqueSubjects.push("HOMEROOM GUIDANCE");
 
   // STRICT MASTER ORDER: Forces the Summary tabs to generate in this exact sequence
   const masterOrder = [
