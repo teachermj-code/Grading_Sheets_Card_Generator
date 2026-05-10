@@ -146,35 +146,29 @@ function initializeSummaries() {
     
 const quarters = ["1Q", "2Q", "3Q", "4Q"];
     
-    // Smart Alias Matching: Find the exact raw header name you typed in CONSOL GRADE
-    const rawList = getSubjectList();
-    let rawHeaderName = rawList.find(s => normalizeSub(s) === subName) || subName;
+    // Create a robust wildcard search key based on the normalized subject name
+    let searchKey = "*" + subName + "*";
+    if (subName === "MATH") searchKey = "*MATH*";
+    else if (subName === "ARALPAN") searchKey = "*ARAL*";
+    else if (subName === "P.E." || subName === "PE") searchKey = "*P*E*";
 
     for (let r = 0; r < studentNames.length; r++) {
       const row = r + 3;
       
-      // MAPEH dynamically averages its sub-components
-      if (subName === "MAPEH") {
-        quarters.forEach((q, qIdx) => {
-          const colL = String.fromCharCode(67 + qIdx);
-          sheet.getRange(row, 3 + qIdx).setFormula(
-            `=IFERROR(AVERAGE('SUMMARY_MUSIC'!${colL}${row}, 'SUMMARY_ARTS'!${colL}${row}, 'SUMMARY_PE'!${colL}${row}, 'SUMMARY_HEALTH'!${colL}${row}), "")`
-          );
-        });
-      } else {
-        // Standard Subjects: Inject the matching raw header (e.g., "ARALPAN") into the formula
-        quarters.forEach((q, qIdx) => {
-          const formula = `=IFERROR(INDEX('${q} CONSOL GRADE'!$C$3:$O, MATCH($B${row}, '${q} CONSOL GRADE'!$B$3:$B, 0), MATCH("${rawHeaderName}", '${q} CONSOL GRADE'!$C$2:$O$2, 0)), "")`;
-          sheet.getRange(row, 3 + qIdx).setFormula(formula);
-        });
-      }
+      // Use INDIRECT to automatically connect to Quarter sheets the moment they are generated
+      quarters.forEach((q, qIdx) => {
+        const sheetName = `"${q} CONSOL GRADE"`;
+        const formula = `=IFERROR(INDEX(INDIRECT("'" & ${sheetName} & "'!$C$3:$Z"), MATCH($B${row}, INDIRECT("'" & ${sheetName} & "'!$B$3:$B"), 0), MATCH("${searchKey}", INDIRECT("'" & ${sheetName} & "'!$C$2:$Z$2"), 0)), "")`;
+        sheet.getRange(row, 3 + qIdx).setFormula(formula);
+      });
+      
       // Average Column Formula
       sheet.getRange(row, 7).setFormula(`=IF(COUNT(C${row}:F${row})>0, ROUND(AVERAGE(C${row}:F${row}), 2), "")`);
     }
 
     // Split Number Formatting: Whole numbers for Quarters (C:F), 2 Decimals for Average (G)
-    sheet.getRange(3, 3, lastRow - 2, 4).setNumberFormat("0"); // Columns C, D, E, F
-    sheet.getRange(3, 7, lastRow - 2, 1).setNumberFormat("0.00"); // Column G
+    sheet.getRange(3, 3, lastRow - 2, 4).setNumberFormat("0"); 
+    sheet.getRange(3, 7, lastRow - 2, 1).setNumberFormat("0.00"); 
     
     sheet.getRange(1, 1, lastRow, 7).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
     
