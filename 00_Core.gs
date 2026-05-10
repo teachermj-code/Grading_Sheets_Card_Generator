@@ -6,7 +6,10 @@
  */
 
 function onOpen() {
-  // 1. Build the Top Navigation Menu
+  // 1. Run the security protocol immediately upon opening
+  secureSystemTemplates();
+
+  // 2. Build the Top Navigation Menu
   SpreadsheetApp.getUi()
       .createMenu('🗂️ Teacher MJ Tools')
       .addItem('🗃️ Open Premium Dashboard', 'showSidebarUI')
@@ -20,17 +23,15 @@ function onOpen() {
       .addItem('💬 Contact Support', 'showSupportUI')
       .addToUi();
 
-  // 2. Automatically launch the Sidebar Dashboard on open
+  // 3. Automatically launch the Sidebar Dashboard on open
   try {
     showSidebarUI();
   } catch (e) {
-    // Failsafe: In rare cases where Google delays permissions on load, 
-    // it will fail silently and wait for the user to click the menu manually.
     console.error("Auto-launch failed. User must launch via menu.", e);
   }
 }
 
-// Global System Constants (Easy to update if school years change)
+// Global System Constants
 const SYSTEM_CONFIG = {
   copyright: '© ' + new Date().getFullYear() + ' CLASSROOM TOOLS BY TEACHER MJ',
   fontPrimary: 'Tahoma'
@@ -45,13 +46,20 @@ function showSidebarUI() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
+/**
+ * Opens the Report Card Generation Modal
+ */
 function showReportCardUI() {
-  const template = HtmlService.createTemplateFromFile('30_ClassRecordForm'); // Or create a specific RC form
-  // For now, we launch the Sidebar since that is your command center
-  showSidebarUI(); 
-  SpreadsheetApp.getUi().alert("Please use the Premium Sidebar to generate Report Cards.");
+  const html = HtmlService.createTemplateFromFile('40_ReportCardForm')
+      .evaluate()
+      .setWidth(400)
+      .setHeight(450);
+  SpreadsheetApp.getUi().showModalDialog(html, " "); // Blank title for premium look
 }
 
+/**
+ * Hides and protects core system templates, making sure RC_MASTER_DATA stays invisible.
+ */
 function secureSystemTemplates() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const templates = [
@@ -90,5 +98,3 @@ function secureSystemTemplates() {
   
   return "Security Protocol Active.";
 }
-
-
