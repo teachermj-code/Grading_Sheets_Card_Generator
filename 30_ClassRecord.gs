@@ -71,19 +71,38 @@ function processBatchForm(data) {
       newSheet.getRange("F1").setValue("GRADE & SECTION: " + data.gradeSection.toUpperCase());
     }
 
-    // Formulas & Protection
+// Formulas & Protection
     if (name === "HOMEROOM GUIDANCE LETTER GRADE" || name === "CONSOL GRADE") {
       newSheet.createTextFinder("'HOMEROOM GUIDANCE'").matchFormulaText(true).replaceAllWith("'" + qPrefix + " HOMEROOM GUIDANCE'");
       
       if (name === "CONSOL GRADE") {
+        const selectedSubjects = data.selections.map(item => item.subject.toUpperCase());
+        
+        // 1. Update formulas ONLY for actively selected subjects
         subjectsSource.forEach(sub => {
           if (sub !== "") {
-            const newTarget = "'" + qPrefix + " " + sub.toUpperCase() + "'!";
-            newSheet.createTextFinder("'" + sub + "'!").matchFormulaText(true).replaceAllWith(newTarget);
-            newSheet.createTextFinder(sub + "!").matchFormulaText(true).replaceAllWith(newTarget);
+            const subUpper = sub.toUpperCase();
+            if (selectedSubjects.includes(subUpper)) {
+              const newTarget = "'" + qPrefix + " " + subUpper + "'!";
+              newSheet.createTextFinder("'" + sub + "'!").matchFormulaText(true).replaceAllWith(newTarget);
+              newSheet.createTextFinder(sub + "!").matchFormulaText(true).replaceAllWith(newTarget);
+            }
+          }
+        });
+
+        // 2. Clear formulas for UNSELECTED subjects to prevent #REF! errors
+        const headers = newSheet.getRange("C2:Z2").getValues()[0];
+        headers.forEach((header, index) => {
+          if (header !== "") {
+            const headerUpper = header.toString().toUpperCase();
+            // Wipe the column if it wasn't selected (ignoring compulsory Homeroom Guidance)
+            if (!selectedSubjects.includes(headerUpper) && headerUpper !== "HOMEROOM GUIDANCE") {
+              newSheet.getRange(3, 3 + index, studentNames.length, 1).clearContent();
+            }
           }
         });
       }
+      
       const protection = newSheet.protect().setDescription('View Only Formula Sheet');
       protection.setWarningOnly(true);
     }
