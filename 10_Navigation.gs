@@ -89,10 +89,15 @@ function initializeSummaries() {
 // Standardize Subject Names (Aliases -> Unified Name)
   const normalizeSub = (name) => {
     if (!name) return "";
+    
+    // Strip all spaces and periods so "P.E." and "PE", or "Aral Pan" and "AralPan" become identical to the computer
     const raw = name.toString().toUpperCase().replace(/\s/g, "").replace(/\./g, ""); 
-    if (["AP", "ARPAN", "ARALPAN", "ARALINGPANLIPUNAN"].includes(raw)) return "ARALING PANLIPUNAN";
-    if (["PE", "PHYSICALEDUCATION"].includes(raw)) return "PE";
-    if (["MATH", "MATHEMATICS"].includes(raw)) return "MATH";
+    
+    // The Dictionary: Catching all variations and returning YOUR official names
+    if (["AP", "ARPAN", "ARALPAN", "ARALINGPANLIPUNAN"].includes(raw)) return "ARALPAN";
+    if (["PE", "PHYSICALEDUCATION"].includes(raw)) return "P.E.";
+    if (["MATH", "MATHS", "MATHEMATICS"].includes(raw)) return "MATH";
+    
     return name.toString().toUpperCase().trim();
   };
 
