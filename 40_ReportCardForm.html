@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- INJECT UNIVERSAL STYLES & HOVER EFFECTS -->
+  <?!= include('02_GlobalStyles'); ?>
+  
+  <style>
+    body { padding: 20px; text-align: center; }
+    .setup-container { display: flex; flex-direction: column; gap: 20px; }
+    .progress-wrapper { margin-top: 30px; }
+    .progress-bar-bg { height: 10px; background: var(--border-color); border-radius: 20px; overflow: hidden; margin: 15px 0; }
+    .progress-bar-fill { height: 100%; width: 0%; background: var(--brand-teal); transition: width 0.4s ease; }
+    .hidden { display: none; }
+    .success-text { color: #10b981; font-weight: bold; }
+    .error-text { color: #ef4444; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <!-- VIEW 1: SELECTION -->
+  <div id="setup-view" class="setup-container">
+    <div style="text-align: left;">
+      <h2 style="margin: 0; color: var(--brand-teal-dark);">Report Card Generator</h2>
+      <p style="font-size: 12px; color: var(--text-muted);">Ensure Attendance and Setup sheets are populated.</p>
+    </div>
+
+    <div style="text-align: left;">
+      <label style="font-weight: bold; font-size: 13px;">Select Grading Period:</label>
+      <select id="grading" style="width: 100%; margin-top: 5px;">
+        <option value="1st Quarter">1st Quarter</option>
+        <option value="2nd Quarter">2nd Quarter</option>
+        <option value="3rd Quarter">3rd Quarter</option>
+        <option value="4th Quarter">4th Quarter</option>
+      </select>
+    </div>
+
+    <button class="btn-primary" onclick="startGeneration()" style="padding: 15px;">
+      🚀 Start Processing PDFs
+    </button>
+  </div>
+
+  <!-- VIEW 2: PROGRESS -->
+  <div id="status-view" class="hidden">
+    <h3 id="status-title">Initialising Engine...</h3>
+    <div class="progress-wrapper">
+      <div class="progress-bar-bg">
+        <div id="progress-bar" class="progress-bar-fill"></div>
+      </div>
+      <p id="status-msg" style="font-size: 12px;">Connecting to Google Drive...</p>
+    </div>
+    <div id="action-area"></div>
+  </div>
+
+  <script>
+    function startGeneration() {
+      const grading = document.getElementById('grading').value;
+      const statusTitle = document.getElementById("status-title");
+      const statusMsg = document.getElementById("status-msg");
+      const progressBar = document.getElementById("progress-bar");
+
+      document.getElementById('setup-view').classList.add('hidden');
+      document.getElementById('status-view').classList.remove('hidden');
+
+      progressBar.style.width = "40%";
+      statusTitle.textContent = "Processing " + grading;
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          progressBar.style.width = "100%";
+          if (response.status === "success") {
+            statusTitle.textContent = "Success!";
+            statusMsg.innerHTML = '<span class="success-text">' + response.message + '</span>';
+            
+            const btn = document.createElement("button");
+            btn.className = "btn-primary";
+            btn.style.marginTop = "20px";
+            btn.style.background = "#10b981";
+            btn.innerText = "📂 Open Output Folder";
+            btn.onclick = () => window.open(response.folderUrl, '_blank');
+            document.getElementById("action-area").appendChild(btn);
+          } else {
+            showError(response.message);
+          }
+        })
+        .withFailureHandler(function(err) {
+          showError(err.message);
+        })
+        .processReportCards(grading);
+    }
+
+    function showError(msg) {
+      document.getElementById("status-title").textContent = "Process Failed";
+      document.getElementById("status-msg").innerHTML = '<span class="error-text">' + msg + '</span>';
+      document.getElementById("progress-bar").style.background = "#ef4444";
+    }
+  </script>
+</body>
+</html>

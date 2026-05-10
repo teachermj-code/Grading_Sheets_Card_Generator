@@ -45,9 +45,9 @@ function showSidebarUI() {
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
-/**
- * PLACEHOLDER: Prevents execution errors until the module is fully built
- */
 function showReportCardUI() {
-  SpreadsheetApp.getUi().alert("🚀 Report Card Generator is currently under development!");
+  const template = HtmlService.createTemplateFromFile('30_ClassRecordForm'); // Or create a specific RC form
+  // For now, we launch the Sidebar since that is your command center
+  showSidebarUI(); 
+  SpreadsheetApp.getUi().alert("Please use the Premium Sidebar to generate Report Cards.");
 }
