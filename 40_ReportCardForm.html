@@ -2,97 +2,131 @@
 <html>
 <head>
   <base target="_top">
-  <!-- INJECT UNIVERSAL STYLES & HOVER EFFECTS -->
+  <!-- INJECT UNIVERSAL STYLES AND MODAL ENGINE -->
   <?!= include('02_GlobalStyles'); ?>
+  <?!= include('01_UniversalModal'); ?>
   
   <style>
-    body { padding: 20px; text-align: center; }
-    .setup-container { display: flex; flex-direction: column; gap: 20px; }
-    .progress-wrapper { margin-top: 30px; }
-    .progress-bar-bg { height: 10px; background: var(--border-color); border-radius: 20px; overflow: hidden; margin: 15px 0; }
-    .progress-bar-fill { height: 100%; width: 0%; background: var(--brand-teal); transition: width 0.4s ease; }
-    .hidden { display: none; }
-    .success-text { color: #10b981; font-weight: bold; }
-    .error-text { color: #ef4444; font-weight: bold; }
+    /* Specific Layout Adjustments for the App View */
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg);
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .form-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 35px 25px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 10px 30px rgba(4, 51, 69, 0.05);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .form-card h2 { margin: 0 0 8px 0; color: var(--teal-dark); font-size: 22px; font-weight: 800; }
+    .form-card p { margin: 0 0 25px 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+    
+    .input-group { text-align: left; margin-bottom: 25px; }
+    .input-label { display: block; font-size: 11px; font-weight: 800; color: var(--teal-dark); margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+    
+    select { 
+      width: 100%; 
+      padding: 14px; 
+      font-size: 14px; 
+      font-weight: bold; 
+      color: var(--teal-dark); 
+      cursor: pointer;
+    }
+
+    .action-btn { width: 100%; padding: 14px; font-size: 15px; }
   </style>
 </head>
 <body>
 
-  <!-- VIEW 1: SELECTION -->
-  <div id="setup-view" class="setup-container">
-    <div style="text-align: left;">
-      <h2 style="margin: 0; color: var(--brand-teal-dark);">Report Card Generator</h2>
-      <p style="font-size: 12px; color: var(--text-muted);">Ensure Attendance and Setup sheets are populated.</p>
+  <!-- MAIN DASHBOARD VIEW -->
+  <div class="main-content">
+    <div class="form-card">
+      <h2>Report Cards</h2>
+      <p>Generate SF9 reports directly from the <b>RC_MASTER_DATA</b> bridge.</p>
+      
+      <div class="input-group">
+        <label class="input-label">Select Grading Period</label>
+        <select id="grading">
+          <option value="1st Quarter">1st Quarter</option>
+          <option value="2nd Quarter">2nd Quarter</option>
+          <option value="3rd Quarter">3rd Quarter</option>
+          <option value="4th Quarter">4th Quarter</option>
+        </select>
+      </div>
+      
+      <button class="btn-primary action-btn" onclick="triggerGeneration()">
+        🚀 Generate PDFs
+      </button>
     </div>
-
-    <div style="text-align: left;">
-      <label style="font-weight: bold; font-size: 13px;">Select Grading Period:</label>
-      <select id="grading" style="width: 100%; margin-top: 5px;">
-        <option value="1st Quarter">1st Quarter</option>
-        <option value="2nd Quarter">2nd Quarter</option>
-        <option value="3rd Quarter">3rd Quarter</option>
-        <option value="4th Quarter">4th Quarter</option>
-      </select>
-    </div>
-
-    <button class="btn-primary" onclick="startGeneration()" style="padding: 15px;">
-      🚀 Start Processing PDFs
-    </button>
   </div>
 
-  <!-- VIEW 2: PROGRESS -->
-  <div id="status-view" class="hidden">
-    <h3 id="status-title">Initialising Engine...</h3>
-    <div class="progress-wrapper">
-      <div class="progress-bar-bg">
-        <div id="progress-bar" class="progress-bar-fill"></div>
-      </div>
-      <p id="status-msg" style="font-size: 12px;">Connecting to Google Drive...</p>
-    </div>
-    <div id="action-area"></div>
+  <!-- INJECTED FOOTER -->
+  <div class="footer-container" style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: auto; padding-top: 15px; padding-bottom: 5px; gap: 6px;">
+    <div class="footer-tag" id="dynamicFooter" style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;"></div>
+    <a href="#" onclick="transitionToSupport()" style="font-size: 11px; font-weight: 800; color: var(--teal); text-decoration: none; display: flex; align-items: center; gap: 4px; transition: 0.2s;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      CONTACT SUPPORT
+    </a>
   </div>
 
   <script>
-    function startGeneration() {
+    // 1. Initialize Footer Branding
+    document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' MSD - COMPILED BY TEACHER MJ';
+
+    // 2. Controller Logic
+    function triggerGeneration() {
       const grading = document.getElementById('grading').value;
-      const statusTitle = document.getElementById("status-title");
-      const statusMsg = document.getElementById("status-msg");
-      const progressBar = document.getElementById("progress-bar");
+      
+      // FIRE THE UNIVERSAL LOADING MODAL
+      showUniversalLoading(
+        'Compiling ' + grading, 
+        'Merging data from the Master Bridge into your Google Doc templates. Please do not close this window.'
+      );
 
-      document.getElementById('setup-view').classList.add('hidden');
-      document.getElementById('status-view').classList.remove('hidden');
-
-      progressBar.style.width = "40%";
-      statusTitle.textContent = "Processing " + grading;
-
+      // EXECUTE BACKEND PROCESS
       google.script.run
         .withSuccessHandler(function(response) {
-          progressBar.style.width = "100%";
           if (response.status === "success") {
-            statusTitle.textContent = "Success!";
-            statusMsg.innerHTML = '<span class="success-text">' + response.message + '</span>';
-            
-            const btn = document.createElement("button");
-            btn.className = "btn-primary";
-            btn.style.marginTop = "20px";
-            btn.style.background = "#10b981";
-            btn.innerText = "📂 Open Output Folder";
-            btn.onclick = () => window.open(response.folderUrl, '_blank');
-            document.getElementById("action-area").appendChild(btn);
+            // Build custom buttons for the Success Modal
+            const customActionHtml = `
+              <button class="btn-modal-secondary" onclick="closeUniversalModal()">Close</button>
+              <button class="btn-modal-primary" onclick="window.open('${response.folderUrl}', '_blank'); closeUniversalModal();">📂 Open Folder</button>
+            `;
+            showUniversalSuccess('Generation Complete!', response.message, customActionHtml);
           } else {
-            showError(response.message);
+            // Handle logical errors (like missing data) gracefully
+            showUniversalWarning('Process Halted', response.message, 'Acknowledge', () => {});
           }
         })
         .withFailureHandler(function(err) {
-          showError(err.message);
+          // Handle hard system crashes
+          showUniversalWarning('System Error', err.message, 'Acknowledge', () => {});
         })
         .processReportCards(grading);
     }
 
-    function showError(msg) {
-      document.getElementById("status-title").textContent = "Process Failed";
-      document.getElementById("status-msg").innerHTML = '<span class="error-text">' + msg + '</span>';
-      document.getElementById("progress-bar").style.background = "#ef4444";
+    // Support Link Fallback (if not defined elsewhere)
+    function transitionToSupport() {
+      window.open('https://mail.google.com/chat/u/0/#chat/dm/teachermjcbb@gmail.com', '_blank');
     }
   </script>
 </body>
