@@ -76,27 +76,42 @@ function processBatchForm(data) {
       newSheet.createTextFinder("'HOMEROOM GUIDANCE'").matchFormulaText(true).replaceAllWith("'" + qPrefix + " HOMEROOM GUIDANCE'");
       
       if (name === "CONSOL GRADE") {
-        const selectedSubjects = data.selections.map(item => item.subject.toUpperCase());
+// 1. Bring in the dictionary to translate names (e.g. MATHEMATICS -> MATH)
+        const normalizeSub = (val) => {
+          if (!val) return "";
+          const raw = val.toString().toUpperCase().replace(/\s/g, "").replace(/\./g, ""); 
+          if (["AP", "ARPAN", "ARALPAN", "ARALINGPANLIPUNAN"].includes(raw)) return "ARALPAN";
+          if (["PE", "PHYSICALEDUCATION"].includes(raw)) return "P.E.";
+          if (["MATH", "MATHS", "MATHEMATICS"].includes(raw)) return "MATH";
+          if (["HG", "HOMEROOM", "HOMEROOMGUIDANCE"].includes(raw)) return "HOMEROOM GUIDANCE";
+          return val.toString().toUpperCase().trim();
+        };
+
+        const selectedNormalized = data.selections.map(item => normalizeSub(item.subject));
+        const masterNormalized = subjectsSource.filter(s => s !== "").map(sub => normalizeSub(sub));
         
-        // 1. Update formulas ONLY for actively selected subjects
+        // 2. Update formulas ONLY for actively selected subjects
         subjectsSource.forEach(sub => {
           if (sub !== "") {
-            const subUpper = sub.toUpperCase();
-            if (selectedSubjects.includes(subUpper)) {
-              const newTarget = "'" + qPrefix + " " + subUpper + "'!";
+            const subNorm = normalizeSub(sub);
+            if (selectedNormalized.includes(subNorm)) {
+              // Note: We use the original 'sub' for the newTarget to match the sheet name exactly
+              const newTarget = "'" + qPrefix + " " + sub.toUpperCase() + "'!";
               newSheet.createTextFinder("'" + sub + "'!").matchFormulaText(true).replaceAllWith(newTarget);
               newSheet.createTextFinder(sub + "!").matchFormulaText(true).replaceAllWith(newTarget);
             }
           }
         });
 
-        // 2. Clear formulas for UNSELECTED subjects to prevent #REF! errors
+        // 3. Clear formulas for UNSELECTED subjects (with Safety Checks!)
         const headers = newSheet.getRange("C2:Z2").getValues()[0];
         headers.forEach((header, index) => {
           if (header !== "") {
-            const headerUpper = header.toString().toUpperCase();
-            // Wipe the column if it wasn't selected (ignoring compulsory Homeroom Guidance)
-            if (!selectedSubjects.includes(headerUpper) && headerUpper !== "HOMEROOM GUIDANCE") {
+            const headerNorm = normalizeSub(header);
+            
+            // SAFETY CHECK: Only wipe if it is an official subject AND it wasn't selected.
+            // This explicitly protects "AVERAGE", "ACADEMIC AWARDS", "MAPEH", and "HOMEROOM" from being deleted.
+            if (masterNormalized.includes(headerNorm) && !selectedNormalized.includes(headerNorm) && headerNorm !== "HOMEROOM GUIDANCE" && headerNorm !== "MAPEH") {
               newSheet.getRange(3, 3 + index, studentNames.length, 1).clearContent();
             }
           }
