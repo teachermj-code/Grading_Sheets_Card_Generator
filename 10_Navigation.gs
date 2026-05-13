@@ -235,8 +235,15 @@ finalSheet.getRange("A1:L1").merge().setFontWeight("bold").setFontSize(14).setHo
   finalSheet.getRange(3, 3, dataRangeCount, 10).setHorizontalAlignment("center"); // All Grades & Status
   finalSheet.getRange(3, 3, dataRangeCount, 9).setNumberFormat("0.00"); // 2 Decimal Places for Subject Grades & GWA
 
-  finalSheet.getRange(1, 1, studentNames.length + 2, 12).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+finalSheet.getRange(1, 1, studentNames.length + 2, 12).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+  
+  // Force Google Sheets to wake up and calculate all formulas before hiding the sheet
+  SpreadsheetApp.flush();
+  
   try { finalSheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch (e) { finalSheet.hideSheet(); }
+
+  // AUTOMATION: Instantly rebuild and reconnect the Master Data bridge behind the scenes!
+  initializeMasterData();
 }
 
 /**
@@ -254,16 +261,53 @@ function updateConsolidatedHeader(gradeSection) {
 }
 
 /**
- * SNAP-BACK SECURITY: Monitors for unauthorized unhiding
+ * SNAP-BACK SECURITY: Monitors for unauthorized edits on protected sheets
+ */
+/**
+ * SNAP-BACK SECURITY: Monitors for unauthorized edits on protected sheets
  */
 function onEdit(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const activeSheet = ss.getActiveSheet();
-  const name = activeSheet.getName();
-  const forbidden = ["TEMPLATE", "Learner's Name", "SUMMARY_", "FINAL CONSOLIDATED"];
+  const activeName = activeSheet.getName();
+  // ADMIN BYPASS: If Developer Mode is ON, ignore security checks
+  if (PropertiesService.getDocumentProperties().getProperty('ADMIN_MODE') === 'true') return;
   
-  if (forbidden.some(f => name.includes(f))) {
-    try { activeSheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch(e) { activeSheet.hideSheet(); }
-    SpreadsheetApp.getUi().alert("⚠️ SYSTEM SECURITY\n\nThis sheet is protected.");
+  // 1. EXACT MATCHES: Only hide if the name is EXACTLY this (Ignores 1Q, 2Q, etc.)
+  const exactForbidden = [
+    "W_Exam", 
+    "WO_Exam", 
+    "CONSOL GRADE", 
+    "HOMEROOM GUIDANCE", 
+    "HOMEROOM GUIDANCE LETTER GRADE",
+    "RC_MASTER_DATA"
+  ];
+  
+  // 2. PARTIAL MATCHES: Hide if the name CONTAINS any of these words
+  const partialForbidden = [
+    "TEMPLATE",
+  ];
+  
+  // Check both security rules
+  const isExactMatch = exactForbidden.includes(activeName);
+  const isPartialMatch = partialForbidden.some(keyword => activeName.includes(keyword));
+  
+  if (isExactMatch || isPartialMatch) {
+    
+    // 1. Instantly hide the forbidden sheet
+    activeSheet.hideSheet();
+    
+    // 2. "Boot" the user back to a safe sheet
+    try {
+      const safeSheet = ss.getSheetByName("Report Card Setup");
+      if (safeSheet) {
+        safeSheet.activate();
+      }
+    } catch (err) {
+      // Failsafe: Do nothing if the safe sheet is missing
+    }
+    
+    // 3. Fire the Premium Modal Overlay (Defined in 00_Core.gs)
+    showSecurityAlertUI();
   }
 }

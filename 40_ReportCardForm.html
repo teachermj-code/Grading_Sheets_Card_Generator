@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- INJECT UNIVERSAL STYLES AND MODAL ENGINE -->
+  <?!= include('02_GlobalStyles'); ?>
+  <?!= include('01_UniversalModal'); ?>
+  
+  <style>
+    /* Specific Layout Adjustments for the App View */
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      box-sizing: border-box;
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg);
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .form-card {
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 35px 25px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 10px 30px rgba(4, 51, 69, 0.05);
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .form-card h2 { margin: 0 0 8px 0; color: var(--teal-dark); font-size: 22px; font-weight: 800; }
+    .form-card p { margin: 0 0 25px 0; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+    
+    .input-group { text-align: left; margin-bottom: 25px; }
+    .input-label { display: block; font-size: 11px; font-weight: 800; color: var(--teal-dark); margin-bottom: 8px; letter-spacing: 0.5px; text-transform: uppercase; }
+    
+    select { 
+      width: 100%; 
+      padding: 14px; 
+      font-size: 14px; 
+      font-weight: bold; 
+      color: var(--teal-dark); 
+      cursor: pointer;
+    }
+
+    .action-btn { width: 100%; padding: 14px; font-size: 15px; }
+  </style>
+</head>
+<body>
+
+  <!-- MAIN DASHBOARD VIEW -->
+  <div class="main-content">
+    <div class="form-card">
+      <h2>Report Cards</h2>
+      <p>Generate SF9 reports directly from the <b>RC_MASTER_DATA</b> bridge.</p>
+      
+      <div class="input-group">
+        <label class="input-label">Select Grading Period</label>
+        <select id="grading">
+          <option value="1st Quarter">1st Quarter</option>
+          <option value="2nd Quarter">2nd Quarter</option>
+          <option value="3rd Quarter">3rd Quarter</option>
+          <option value="4th Quarter">4th Quarter</option>
+        </select>
+      </div>
+      
+      <button class="btn-primary action-btn" onclick="triggerGeneration()">
+        📥 Generate PDFs
+      </button>
+    </div>
+  </div>
+
+  <!-- INJECTED FOOTER -->
+  <div class="footer-container" style="display: flex; flex-direction: column; justify-content: center; align-items: center; margin-top: auto; padding-top: 15px; padding-bottom: 5px; gap: 6px;">
+    <div class="footer-tag" id="dynamicFooter" style="font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.5px;"></div>
+    <a href="#" onclick="transitionToSupport()" style="font-size: 11px; font-weight: 800; color: var(--teal); text-decoration: none; display: flex; align-items: center; gap: 4px; transition: 0.2s;">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      CONTACT SUPPORT
+    </a>
+  </div>
+
+<script>
+    // 1. Initialize Footer Branding
+    document.getElementById('dynamicFooter').innerText = '© ' + new Date().getFullYear() + ' MSD - COMPILED BY TEACHER MJ';
+
+    // 2. The Initial Checker
+    function triggerGeneration() {
+      const grading = document.getElementById('grading').value;
+      
+      // Step 1: Show a quick loading state while checking Google Drive
+      showUniversalLoading('Verifying Directory...', 'Checking Drive for existing files...');
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.exists) {
+            // It ALREADY EXISTS -> Show Warning Confirmation
+            showUniversalWarning(
+              'Duplicate Detected', 
+              'You have already generated ' + grading + ' report cards. Do you want to generate a new set anyway?', 
+              'Generate New Set', 
+              () => executeMerge(grading) // Triggers actual generation if they click Yes
+            );
+          } else {
+            // It does NOT exist -> Ask standard confirmation before starting heavy task
+            showUniversalWarning(
+              'Confirm Generation', 
+              'You are about to generate SF9 PDFs for ' + grading + '. This process will take a few minutes. Proceed?', 
+              'Yes, Generate PDFs', 
+              () => executeMerge(grading) // Triggers actual generation if they click Yes
+            );
+          }
+        })
+        .withFailureHandler(function(err) {
+          showUniversalWarning('System Error', err.message, 'Acknowledge', () => closeUniversalModal());
+        })
+        .checkIfCardsExist(grading);
+    }
+
+    // 3. The Actual PDF Generator
+    function executeMerge(grading) {
+      // Step 2: Fire the "What is happening" Modal Overlay
+      showUniversalLoading(
+        'Compiling ' + grading, 
+        'Merging data from the Master Bridge into your Google Doc templates. Please do not close this window.'
+      );
+
+      // Execute backend generation
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (response.status === "success") {
+            const customActionHtml = `
+              <button class="btn-modal-secondary" onclick="closeUniversalModal()">Close</button>
+              <button class="btn-modal-primary" onclick="window.open('${response.folderUrl}', '_blank'); closeUniversalModal();">📂 Open Folder</button>
+            `;
+            showUniversalSuccess('Generation Complete!', response.message, customActionHtml);
+          } else {
+            showUniversalWarning('Process Halted', response.message, 'Acknowledge', () => closeUniversalModal());
+          }
+        })
+        .withFailureHandler(function(err) {
+          showUniversalWarning('System Error', err.message, 'Acknowledge', () => closeUniversalModal());
+        })
+        .processReportCards(grading);
+    }
+
+    // Support Link Fallback
+    function transitionToSupport() {
+      window.open('https://mail.google.com/chat/u/0/#chat/dm/teachermjcbb@gmail.com', '_blank');
+    }
+  </script>
+</body>
+</html>
