@@ -128,7 +128,11 @@ function processBatchForm(data) {
 
   ss.setActiveSheet(sourceSheet);
   updateConsolidatedHeader(data.gradeSection); // Calls function from 10_Navigation.gs
-  secureSystemTemplates(); // Lock down templates immediately
+secureSystemTemplates(); // Lock down templates immediately
+  
+  // Force Google Sheets to instantly calculate all newly injected formulas
+  SpreadsheetApp.flush();
+  
   return "Success";
 }
 

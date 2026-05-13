@@ -27,6 +27,7 @@ function showReportCardUI() {
       .setWidth(400)
       .setHeight(450);
   SpreadsheetApp.getUi().showModalDialog(html, " "); // Blank title for premium look
+  SpreadsheetApp.flush();
 }
 
 /**
@@ -34,10 +35,16 @@ function showReportCardUI() {
  */
 function processReportCards(gradingPeriod) {
   try {
+    // AUTOMATION: Silently rebuild and refresh the master bridge right before reading data
+    initializeMasterData();
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const masterSheet = ss.getSheetByName("RC_MASTER_DATA");
     
     if (!masterSheet) throw new Error("RC_MASTER_DATA sheet not found! Please run initializeMasterData first.");
+
+// WAKE UP CALL: Force Google Sheets to calculate all formulas on the hidden master sheet 
+    // before we try to read the grades. Without this, hidden sheets "snooze" and return blank grades.
+    SpreadsheetApp.flush(); 
 
     // 1. Get all data from the bridge sheet
     const data = masterSheet.getDataRange().getValues();
@@ -166,7 +173,7 @@ function initializeMasterData() {
   
   // RE-INJECT FORMULAS
   master.getRange("A2").setFormula("=ARRAYFORMULA('Report Card Setup'!A2:J)");
-  master.getRange("K2").setFormula("=ARRAYFORMULA(RC_Attendance!B2:AH)");
+  master.getRange("K2").setFormula("=ARRAYFORMULA(RC_Attendance!B2:AK)");
 
   const subjects = [
     { range: "AU2", sheet: "SUMMARY_FILIPINO" },
@@ -183,20 +190,23 @@ function initializeMasterData() {
     { range: "CX2", sheet: "SUMMARY_HEALTH" }
   ];
 
-  subjects.forEach(sub => {
-    master.getRange(sub.range).setFormula(`=IFERROR(ARRAYFORMULA('${sub.sheet}'!C3:G), "")`);
+subjects.forEach(sub => {
+    // FIX: Use INDIRECT so the formula doesn't permanently break (#REF!) if the summary sheet doesn't exist yet
+    master.getRange(sub.range).setFormula(`=ARRAYFORMULA(IFERROR(INDIRECT("'${sub.sheet}'!C3:G"), ""))`);
   });
 
-  // Homeroom Guidance starting at DF2
-  master.getRange("DF2").setFormula("=IFERROR(ARRAYFORMULA('1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
-  master.getRange("DU2").setFormula("=IFERROR(ARRAYFORMULA('2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
-  master.getRange("EJ2").setFormula("=IFERROR(ARRAYFORMULA('3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
-  master.getRange("EY2").setFormula("=IFERROR(ARRAYFORMULA('4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20), \"\")");
+  // Homeroom Guidance starting at DF2 using INDIRECT for bulletproof dynamic referencing
+  master.getRange("DF2").setFormula(`=ARRAYFORMULA(IFERROR(INDIRECT("'1Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20"), ""))`);
+  master.getRange("DU2").setFormula(`=ARRAYFORMULA(IFERROR(INDIRECT("'2Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20"), ""))`);
+  master.getRange("EJ2").setFormula(`=ARRAYFORMULA(IFERROR(INDIRECT("'3Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20"), ""))`);
+  master.getRange("EY2").setFormula(`=ARRAYFORMULA(IFERROR(INDIRECT("'4Q HOMEROOM GUIDANCE LETTER GRADE'!F6:T20"), ""))`);
+  
   // Force Google Sheets to instantly calculate all newly injected ArrayFormulas
   SpreadsheetApp.flush();
 
   master.hideSheet();
-  SpreadsheetApp.getUi().alert("Master Bridge Restored. Headers and Columns DC:DE preserved.");
+  // Silenced the UI alert so it doesn't interrupt the automated generation flow!
+  // SpreadsheetApp.getUi().alert("Master Bridge Restored. Headers and Columns DC:DE preserved.");
 }
 
 /**

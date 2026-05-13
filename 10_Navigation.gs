@@ -235,8 +235,15 @@ finalSheet.getRange("A1:L1").merge().setFontWeight("bold").setFontSize(14).setHo
   finalSheet.getRange(3, 3, dataRangeCount, 10).setHorizontalAlignment("center"); // All Grades & Status
   finalSheet.getRange(3, 3, dataRangeCount, 9).setNumberFormat("0.00"); // 2 Decimal Places for Subject Grades & GWA
 
-  finalSheet.getRange(1, 1, studentNames.length + 2, 12).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+finalSheet.getRange(1, 1, studentNames.length + 2, 12).setBorder(true, true, true, true, true, true, "black", SpreadsheetApp.BorderStyle.SOLID);
+  
+  // Force Google Sheets to wake up and calculate all formulas before hiding the sheet
+  SpreadsheetApp.flush();
+  
   try { finalSheet.setSheetVisibility(SpreadsheetApp.SheetVisibility.VERY_HIDDEN); } catch (e) { finalSheet.hideSheet(); }
+
+  // AUTOMATION: Instantly rebuild and reconnect the Master Data bridge behind the scenes!
+  initializeMasterData();
 }
 
 /**
@@ -256,20 +263,38 @@ function updateConsolidatedHeader(gradeSection) {
 /**
  * SNAP-BACK SECURITY: Monitors for unauthorized edits on protected sheets
  */
+/**
+ * SNAP-BACK SECURITY: Monitors for unauthorized edits on protected sheets
+ */
 function onEdit(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const activeSheet = ss.getActiveSheet();
   const activeName = activeSheet.getName();
+  // ADMIN BYPASS: If Developer Mode is ON, ignore security checks
+  if (PropertiesService.getDocumentProperties().getProperty('ADMIN_MODE') === 'true') return;
   
-  // Dynamic list: Any sheet containing these words will trigger the trap
-  const forbiddenKeywords = ["TEMPLATE","W_Exam", "WO_Exam", "CONSOL GRADE", "HOMEROOM GUIDANCE", "HOMEROOM GUIDANCE LETTER GRADE","RC_MASTER_DATA", "SUMMARY_", "FINAL CONSOLIDATED"];
+  // 1. EXACT MATCHES: Only hide if the name is EXACTLY this (Ignores 1Q, 2Q, etc.)
+  const exactForbidden = [
+    "W_Exam", 
+    "WO_Exam", 
+    "CONSOL GRADE", 
+    "HOMEROOM GUIDANCE", 
+    "HOMEROOM GUIDANCE LETTER GRADE",
+    "RC_MASTER_DATA"
+  ];
   
+  // 2. PARTIAL MATCHES: Hide if the name CONTAINS any of these words
+  const partialForbidden = [
+    "TEMPLATE",
+  ];
   
-  // Check if the current sheet name contains any of the forbidden keywords
-  const isForbidden = forbiddenKeywords.some(keyword => activeName.includes(keyword));
+  // Check both security rules
+  const isExactMatch = exactForbidden.includes(activeName);
+  const isPartialMatch = partialForbidden.some(keyword => activeName.includes(keyword));
   
-  if (isForbidden) {
-    // 1. Instantly hide the forbidden sheet (Native Google Sheets method)
+  if (isExactMatch || isPartialMatch) {
+    
+    // 1. Instantly hide the forbidden sheet
     activeSheet.hideSheet();
     
     // 2. "Boot" the user back to a safe sheet

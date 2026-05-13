@@ -6,6 +6,8 @@
  */
 
 function onOpen() {
+  // 0. AUTO-LOCKOUT: Instantly revoke Admin Mode upon refresh or startup
+  PropertiesService.getDocumentProperties().setProperty('ADMIN_MODE', 'false');
 // 1. Run the security protocol to hide system templates
   secureSystemTemplates();
 
@@ -21,6 +23,7 @@ function onOpen() {
       .addItem('🏆 Generate Academic Awards', 'showAwardsUI')
       .addItem('📄 Generate Report Card', 'showReportCardUI')
       .addSeparator()
+      .addItem('🔓 Toggle Admin / Developer Mode', 'toggleAdminMode')
       .addItem('⚙️ Navigation Control Center', 'showNavigationUI')
       .addSeparator()
       .addItem('💬 Contact Support', 'showSupportUI')
@@ -110,6 +113,8 @@ function onSelectionChange(e) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const activeSheet = ss.getActiveSheet();
   const activeName = activeSheet.getName();
+  // ADMIN BYPASS: If Developer Mode is ON, ignore security checks
+  if (PropertiesService.getDocumentProperties().getProperty('ADMIN_MODE') === 'true') return;
   
   // List of sheets that must NEVER be seen or clicked by the user
   const forbiddenSheets = [
@@ -183,5 +188,58 @@ function enforceCoreSheets() {
   const landingSheet = ss.getSheetByName(coreSheets[0]);
   if (landingSheet) {
     landingSheet.activate();
+  }
+}
+
+/**
+ * 🔓 ADMIN BYPASS: Toggles Developer mode. Requires PIN to enable.
+ */
+function toggleAdminMode() {
+  const props = PropertiesService.getDocumentProperties();
+  const currentMode = props.getProperty('ADMIN_MODE');
+  
+  if (currentMode === 'true') {
+    // 1. Turn OFF Admin Mode (No PIN required to lock down)
+    props.setProperty('ADMIN_MODE', 'false');
+    secureSystemTemplates(); // Re-lock everything instantly
+    // Fire the premium Lock Confirmation Modal instead of a basic alert
+    const html = HtmlService.createTemplateFromFile('56_AdminLocked')
+      .evaluate()
+      .setWidth(350)
+      .setHeight(250);
+    SpreadsheetApp.getUi().showModalDialog(html, " ");
+  } else {
+    // 2. Launch the PIN Entry Modal
+    const html = HtmlService.createTemplateFromFile('55_AdminPin')
+      .evaluate()
+      .setWidth(350)
+      .setHeight(250);
+    SpreadsheetApp.getUi().showModalDialog(html, " "); 
+  }
+}
+
+/**
+ * Validates the entered PIN against the Script Properties
+ */
+function verifyAdminPin(inputPin) {
+  // Pull the secret PIN from the backend Project Settings
+  const actualPin = PropertiesService.getScriptProperties().getProperty('admin');
+  
+  if (!actualPin) {
+    return { success: false, message: "System Error: Admin PIN has not been set in Script Properties." };
+  }
+  
+  if (inputPin === actualPin) {
+    // Success: Turn on Admin Mode and unhide the bridge
+    PropertiesService.getDocumentProperties().setProperty('ADMIN_MODE', 'true');
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const master = ss.getSheetByName("RC_MASTER_DATA");
+    if (master) {
+      master.showSheet();
+      master.activate();
+    }
+    return { success: true };
+  } else {
+    return { success: false, message: "Access Denied: Incorrect PIN." };
   }
 }
